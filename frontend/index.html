@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente de Estudos</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Aplica o tema salvo antes de desenhar a página (evita "piscar" claro → escuro) -->
+  <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || "claro"; } catch {}</script>
+</head>
+<body class="pagina-app">
+  <!-- Barra do topo: só aparece no celular, para abrir a barra lateral -->
+  <header class="barra-movel">
+    <button type="button" id="abrir-lateral" class="botao-icone" aria-label="Abrir menu"
+      aria-controls="lateral" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <span class="logo"><span class="logo-icone">📚</span><strong>Assistente de Estudos</strong></span>
+  </header>
+
+  <div class="app">
+    <aside class="lateral" id="lateral">
+      <div class="lateral-logo">
+        <span class="logo-icone">📚</span>
+        <div class="logo-texto">
+          <strong>Assistente de Estudos</strong>
+          <small>Estude com IA</small>
+        </div>
+      </div>
+
+      <div class="lateral-meio">
+        <section>
+          <h2>Disciplina</h2>
+          <div class="linha-disciplina">
+            <select id="select-disciplina" aria-label="Disciplina"></select>
+            <button id="botao-nova-disciplina" type="button" title="Nova disciplina">+</button>
+          </div>
+          <button id="botao-remover-disciplina" type="button" class="link-perigo" hidden>Remover disciplina</button>
+        </section>
+
+        <nav class="menu" id="menu" aria-label="Menu principal">
+          <h2>Menu</h2>
+          <button type="button" data-tela="assistente">🤖 <span>Assistente IA</span></button>
+          <button type="button" data-tela="simulados">❓ <span>Simulados</span></button>
+          <button type="button" data-tela="atividades">📝 <span>Atividades</span></button>
+          <button type="button" data-tela="calendario">📅 <span>Calendário</span></button>
+          <button type="button" data-tela="videos">🎬 <span>Videoaulas</span></button>
+          <button type="button" data-tela="turma">💬 <span>Chat da turma</span></button>
+          <button type="button" data-tela="painel" data-so-professor hidden>📊 <span>Painel da turma</span></button>
+        </nav>
+
+        <section id="secao-materiais" hidden>
+          <h2>Materiais</h2>
+          <label class="botao-upload">
+            + Enviar PDF
+            <input type="file" id="input-pdf" accept=".pdf" multiple hidden>
+          </label>
+          <p id="status-upload" class="status"></p>
+          <ul id="lista-documentos"></ul>
+        </section>
+      </div>
+
+      <!-- Conta: clicar abre as Configurações -->
+      <div class="lateral-conta">
+        <button type="button" class="conta" data-tela="config" title="Configurações da conta">
+          <span class="avatar" id="avatar-usuario" aria-hidden="true"></span>
+          <span class="conta-texto">
+            <strong id="nome-usuario"></strong>
+            <span id="tipo-usuario" class="selo"></span>
+          </span>
+          <svg class="engrenagem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button type="button" id="botao-sair" class="botao-icone" title="Sair" aria-label="Sair">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        </button>
+      </div>
+    </aside>
+    <div class="fundo-lateral" id="fundo-lateral" hidden></div>
+
+    <!-- Cada <main class="tela"> é uma opção do menu; só uma fica visível -->
+    <main class="tela chat" id="tela-assistente">
+      <div id="mensagens"></div>
+      <form id="form-pergunta">
+        <input type="text" id="input-pergunta" placeholder="Pergunte algo sobre o material..." autocomplete="off">
+        <button type="submit">Enviar</button>
+      </form>
+    </main>
+
+    <main class="tela pagina" id="tela-simulados" hidden>
+      <h2>❓ Simulados</h2>
+      <div class="precisa-disciplina">
+        <form id="form-simulado" class="cartao-form linha-form">
+          <label>Material <select id="simulado-arquivo" required></select></label>
+          <label>Questões
+            <select id="simulado-quantidade">
+              <option>5</option><option selected>10</option><option>15</option><option>20</option>
+            </select>
+          </label>
+          <button type="submit" class="botao-primario">Gerar simulado</button>
+        </form>
+        <div id="simulado-area"></div>
+        <h3>Meus resultados</h3>
+        <div id="simulado-historico"></div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-atividades" hidden>
+      <h2>📝 Atividades</h2>
+      <div class="precisa-disciplina">
+        <form id="form-atividade" class="cartao-form" data-so-professor hidden>
+          <h3>Nova atividade</h3>
+          <label>Título <input type="text" name="titulo" required maxlength="150"></label>
+          <label>Prazo de entrega <input type="date" name="prazo" required></label>
+          <label>Enunciado <textarea name="descricao" rows="4" maxlength="5000"></textarea></label>
+          <button type="submit" class="botao-primario">Publicar atividade</button>
+        </form>
+        <div id="lista-atividades"></div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-calendario" hidden>
+      <div class="titulo-com-acao">
+        <h2>📅 Calendário</h2>
+        <button type="button" id="botao-notificacoes" class="botao-secundario" hidden>🔔 Ativar notificações</button>
+      </div>
+      <div class="precisa-disciplina">
+        <!-- Cartão de agendamento: dias à esquerda, horários à direita, resumo embaixo -->
+        <section class="agenda">
+          <div class="agenda-corpo">
+            <div class="agenda-calendario">
+              <div class="calendario-topo">
+                <button type="button" id="mes-anterior" aria-label="Mês anterior">‹</button>
+                <strong id="mes-titulo"></strong>
+                <button type="button" id="mes-seguinte" aria-label="Próximo mês">›</button>
+                <button type="button" id="mes-hoje">Hoje</button>
+              </div>
+              <div class="legenda">
+                <span><i class="ponto turma"></i> Turma</span>
+                <span><i class="ponto pessoal"></i> Pessoal</span>
+                <span><i class="ponto prazo"></i> Prazo de atividade</span>
+                <span><i class="ponto escolhido"></i> Escolhido</span>
+              </div>
+              <div id="grade-calendario" class="grade-calendario"></div>
+              <p class="dica">Clique nos dias em que quer ser lembrado. Dá para escolher vários.</p>
+            </div>
+            <div class="agenda-horarios" id="lista-horarios" role="listbox" aria-label="Horário"></div>
+          </div>
+
+          <form id="form-evento" class="agenda-rodape">
+            <div class="linha-campos">
+              <label>O que lembrar <input type="text" name="titulo" required maxlength="120" placeholder="Ex.: Revisar SQL"></label>
+              <label>Repetir
+                <select name="repetir">
+                  <option value="1">Não repetir</option>
+                  <option value="4">Toda semana, por 4 semanas</option>
+                  <option value="8">Toda semana, por 8 semanas</option>
+                  <option value="12">Toda semana, por 12 semanas</option>
+                  <option value="16">Toda semana, por 16 semanas</option>
+                </select>
+              </label>
+            </div>
+            <label>Observação <input type="text" name="descricao" maxlength="1000" placeholder="Opcional"></label>
+            <div class="linha-resumo">
+              <p id="resumo-agenda" class="resumo-agenda">Escolha um ou mais dias no calendário.</p>
+              <button type="button" id="limpar-dias" class="link-perigo" hidden>Limpar dias</button>
+              <button type="submit" id="salvar-evento" class="botao-primario" disabled>Salvar lembrete</button>
+            </div>
+          </form>
+        </section>
+
+        <h3 id="dia-titulo">Próximos eventos</h3>
+        <div id="lista-eventos"></div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-videos" hidden>
+      <h2>🎬 Videoaulas</h2>
+      <div class="precisa-disciplina">
+        <form id="form-video" class="cartao-form" data-so-professor hidden>
+          <h3>Adicionar videoaula</h3>
+          <label>Título <input type="text" name="titulo" required maxlength="150"></label>
+          <label>Link do vídeo <small>(YouTube ou outro site)</small>
+            <input type="url" name="url" required placeholder="https://www.youtube.com/watch?v=...">
+          </label>
+          <label>Descrição <textarea name="descricao" rows="2" maxlength="1000"></textarea></label>
+          <button type="submit" class="botao-primario">Adicionar</button>
+        </form>
+        <div id="lista-videos" class="grade-videos"></div>
+      </div>
+    </main>
+
+    <main class="tela chat" id="tela-turma" hidden>
+      <div class="chat-turma-topo">
+        <h2>💬 Chat da turma <small id="turma-disciplina"></small></h2>
+      </div>
+      <div id="mensagens-turma" class="precisa-disciplina"></div>
+      <form id="form-turma" class="precisa-disciplina">
+        <input type="text" id="input-turma" placeholder="Escreva para a turma..." autocomplete="off" maxlength="1000">
+        <button type="submit">Enviar</button>
+      </form>
+    </main>
+
+    <main class="tela pagina" id="tela-painel" hidden>
+      <h2>📊 Painel da turma: <span id="painel-disciplina"></span></h2>
+      <div class="precisa-disciplina">
+        <div class="abas">
+          <button type="button" class="aba ativa" data-aba="notas">Notas dos simulados</button>
+          <button type="button" class="aba" data-aba="perguntas">Perguntas dos alunos</button>
+        </div>
+        <div id="painel-conteudo"></div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-config" hidden>
+      <h2>⚙️ Configurações</h2>
+      <div class="colunas">
+        <form id="form-perfil" class="cartao-form">
+          <h3>Perfil</h3>
+          <label>Nome <input type="text" name="nome" required autocomplete="name"></label>
+          <label>E-mail <input type="email" name="email" disabled></label>
+          <label>Tipo de conta <input type="text" name="tipo" disabled></label>
+          <button type="submit" class="botao-primario">Salvar</button>
+          <p class="status" role="status"></p>
+        </form>
+
+        <form id="form-senha" class="cartao-form">
+          <h3>Trocar senha</h3>
+          <label>Senha atual <input type="password" name="senha_atual" required autocomplete="current-password"></label>
+          <label>Nova senha <small>(mínimo 6 caracteres)</small>
+            <input type="password" name="nova_senha" required minlength="6" autocomplete="new-password">
+          </label>
+          <label>Confirmar nova senha
+            <input type="password" name="confirmar" required minlength="6" autocomplete="new-password">
+          </label>
+          <button type="submit" class="botao-primario">Trocar senha</button>
+          <p class="status" role="status"></p>
+        </form>
+
+        <div class="cartao-form">
+          <h3>Aparência</h3>
+          <fieldset class="tipo">
+            <legend>Tema</legend>
+            <label><input type="radio" name="tema" value="claro"> ☀️ Claro</label>
+            <label><input type="radio" name="tema" value="escuro"> 🌙 Escuro</label>
+          </fieldset>
+        </div>
+
+        <div class="cartao-form">
+          <h3>Segurança</h3>
+          <p class="dica">Saia da sua conta em todos os outros navegadores e dispositivos.</p>
+          <button type="button" id="botao-encerrar-sessoes" class="botao-secundario">Encerrar outras sessões</button>
+          <p class="status" id="status-sessoes" role="status"></p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Avisos de lembretes na hora marcada (aparecem em qualquer tela) -->
+  <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+  <script src="simulados.js"></script>
+  <script src="atividades.js"></script>
+  <script src="calendario.js"></script>
+  <script src="videos.js"></script>
+  <script src="turma.js"></script>
+  <script src="config.js"></script>
+</body>
+</html>

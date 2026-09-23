@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrar · Assistente de Estudos</title>
+  <link rel="stylesheet" href="login.css">
+  <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || "claro"; } catch {}</script>
+</head>
+<body>
+  <div class="pagina-login">
+    <!-- Lado esquerdo: ondas + ícones orbitando (só decoração; some em telas estreitas) -->
+    <section class="lado-visual" aria-hidden="true">
+      <div class="ondas" id="ondas"></div>
+      <div class="orbitas" id="orbitas">
+        <span class="titulo-visual">Assistente<br>de Estudos</span>
+      </div>
+    </section>
+
+    <!-- Lado direito: formulários -->
+    <main class="lado-form">
+      <section class="cartao-login">
+        <form id="form-entrar" novalidate>
+          <div class="revelar"><h1>Bem-vindo de volta</h1></div>
+          <div class="revelar"><p class="subtitulo">Entre na sua conta para continuar estudando.</p></div>
+
+          <div class="campo">
+            <div class="revelar"><label for="entrar-email">E-mail <span class="obrigatorio">*</span></label></div>
+            <div class="revelar largo">
+              <div class="brilho"><input type="email" id="entrar-email" name="email" autocomplete="email"
+                placeholder="seu@email.com" data-rotulo="E-mail" required></div>
+              <p class="erro-campo"></p>
+            </div>
+          </div>
+
+          <div class="campo">
+            <div class="revelar"><label for="entrar-senha">Senha <span class="obrigatorio">*</span></label></div>
+            <div class="revelar largo">
+              <div class="brilho com-olho">
+                <input type="password" id="entrar-senha" name="senha" autocomplete="current-password"
+                  placeholder="Sua senha" data-rotulo="Senha" required>
+                <button type="button" class="olho" aria-label="Mostrar senha"></button>
+              </div>
+              <p class="erro-campo"></p>
+            </div>
+          </div>
+
+          <div class="revelar largo"><p class="erro-geral" role="alert"></p></div>
+          <div class="revelar largo sem-corte">
+            <button type="submit" class="botao-enviar">Entrar &rarr;<span class="linha-gradiente"></span></button>
+          </div>
+          <div class="revelar centro">
+            <button type="button" class="link-troca" data-ir="cadastrar">Não tem conta? <strong>Criar conta</strong></button>
+          </div>
+        </form>
+
+        <form id="form-cadastrar" novalidate hidden>
+          <div class="revelar"><h1>Crie sua conta</h1></div>
+          <div class="revelar"><p class="subtitulo">Tire dúvidas, gere resumos, flashcards e simulados das suas disciplinas.</p></div>
+
+          <div class="campo">
+            <div class="revelar"><label for="cad-nome">Nome <span class="obrigatorio">*</span></label></div>
+            <div class="revelar largo">
+              <div class="brilho"><input type="text" id="cad-nome" name="nome" autocomplete="name"
+                placeholder="Seu nome completo" data-rotulo="Nome" required></div>
+              <p class="erro-campo"></p>
+            </div>
+          </div>
+
+          <div class="campo">
+            <div class="revelar"><label for="cad-email">E-mail <span class="obrigatorio">*</span></label></div>
+            <div class="revelar largo">
+              <div class="brilho"><input type="email" id="cad-email" name="email" autocomplete="email"
+                placeholder="seu@email.com" data-rotulo="E-mail" required></div>
+              <p class="erro-campo"></p>
+            </div>
+          </div>
+
+          <div class="campo">
+            <div class="revelar"><label for="cad-senha">Senha <span class="obrigatorio">*</span></label></div>
+            <div class="revelar largo">
+              <div class="brilho com-olho">
+                <input type="password" id="cad-senha" name="senha" autocomplete="new-password"
+                  placeholder="Mínimo de 6 caracteres" data-rotulo="Senha" required>
+                <button type="button" class="olho" aria-label="Mostrar senha"></button>
+              </div>
+              <p class="erro-campo"></p>
+            </div>
+          </div>
+
+          <div class="campo">
+            <div class="revelar"><span class="rotulo">Eu sou <span class="obrigatorio">*</span></span></div>
+            <div class="revelar largo">
+              <div class="escolha-tipo" role="radiogroup" aria-label="Tipo de conta">
+                <label><input type="radio" name="tipo" value="aluno" checked><span>🎓 Aluno</span></label>
+                <label><input type="radio" name="tipo" value="professor"><span>👩‍🏫 Professor</span></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="revelar largo"><p class="erro-geral" role="alert"></p></div>
+          <div class="revelar largo sem-corte">
+            <button type="submit" class="botao-enviar">Criar conta &rarr;<span class="linha-gradiente"></span></button>
+          </div>
+          <div class="revelar centro">
+            <button type="button" class="link-troca" data-ir="entrar">Já tem conta? <strong>Entrar</strong></button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>
