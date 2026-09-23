@@ -47,6 +47,10 @@ class PedidoEstudo(BaseModel):
     quantidade: int = Field(default=10, ge=1, le=30)
 
 
+class AulaConcluida(BaseModel):
+    concluida: bool
+
+
 class ResultadoSimulado(BaseModel):
     arquivo: str
     acertos: int = Field(ge=0)
@@ -103,10 +107,12 @@ def remover_disciplina(disciplina_id: int, usuario: dict = Depends(usuario_atual
 def listar_documentos(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
     _disciplina(disciplina_id)
     return db.consultar(
-        """SELECT doc.arquivo, doc.trechos, doc.criado_em, u.nome AS enviado_por
+        """SELECT doc.id, doc.arquivo, doc.trechos, doc.criado_em, u.nome AS enviado_por,
+                  (c.documento_id IS NOT NULL) AS concluida
            FROM documentos doc JOIN usuarios u ON u.id = doc.enviado_por
+           LEFT JOIN aulas_concluidas c ON c.documento_id = doc.id AND c.usuario_id = ?
            WHERE doc.disciplina_id = ? ORDER BY doc.arquivo""",
-        (disciplina_id,),
+        (usuario["id"], disciplina_id),
     )
 
 
@@ -196,6 +202,46 @@ def meus_resultados(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
            WHERE disciplina_id = ? AND usuario_id = ? ORDER BY criado_em DESC LIMIT 50""",
         (disciplina_id, usuario["id"]),
     )
+
+
+# ---------------------------------------------------------------- visão geral e progresso
+
+@app.get("/api/visao-geral")
+def visao_geral(usuario: dict = Depends(usuario_atual)):
+    """Todas as disciplinas com suas aulas (e se o usuário já estudou cada uma) e atividades."""
+    disciplinas = {d["id"]: {**d, "aulas": [], "atividades": []}
+                   for d in db.consultar("SELECT id, nome FROM disciplinas ORDER BY nome")}
+    for aula in db.consultar(
+        """SELECT doc.id, doc.disciplina_id, doc.arquivo, (c.documento_id IS NOT NULL) AS concluida
+           FROM documentos doc
+           LEFT JOIN aulas_concluidas c ON c.documento_id = doc.id AND c.usuario_id = ?
+           ORDER BY doc.arquivo""",
+        (usuario["id"],),
+    ):
+        disciplinas[aula.pop("disciplina_id")]["aulas"].append({**aula, "concluida": bool(aula["concluida"])})
+    for atividade in db.consultar(
+        """SELECT a.id, a.disciplina_id, a.titulo, a.prazo, e.criado_em AS entregue_em, e.nota,
+                  (SELECT COUNT(*) FROM entregas WHERE atividade_id = a.id) AS total_entregas
+           FROM atividades a
+           LEFT JOIN entregas e ON e.atividade_id = a.id AND e.aluno_id = ?
+           ORDER BY a.prazo, a.id""",
+        (usuario["id"],),
+    ):
+        disciplinas[atividade.pop("disciplina_id")]["atividades"].append(atividade)
+    return list(disciplinas.values())
+
+
+@app.put("/api/aulas/{documento_id}/concluida")
+def marcar_aula(documento_id: int, dados: AulaConcluida, usuario: dict = Depends(usuario_atual)):
+    if not db.consultar_um("SELECT id FROM documentos WHERE id = ?", (documento_id,)):
+        raise HTTPException(404, "Aula não encontrada.")
+    if dados.concluida:
+        db.executar("INSERT OR IGNORE INTO aulas_concluidas (usuario_id, documento_id) VALUES (?, ?)",
+                    (usuario["id"], documento_id))
+    else:
+        db.executar("DELETE FROM aulas_concluidas WHERE usuario_id = ? AND documento_id = ?",
+                    (usuario["id"], documento_id))
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------- lembretes

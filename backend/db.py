@@ -108,6 +108,14 @@ CREATE TABLE IF NOT EXISTS videos (
     criado_em      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Aulas (PDFs) que cada usuário marcou como estudadas: base do progresso por disciplina
+CREATE TABLE IF NOT EXISTS aulas_concluidas (
+    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    documento_id  INTEGER NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (usuario_id, documento_id)
+);
+
 CREATE TABLE IF NOT EXISTS mensagens_turma (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     disciplina_id INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
