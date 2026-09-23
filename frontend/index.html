@@ -4,24 +4,50 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Assistente de Estudos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
   <!-- Aplica o tema salvo antes de desenhar a página (evita "piscar" claro → escuro) -->
   <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || "claro"; } catch {}</script>
 </head>
 <body class="pagina-app">
+  <!-- Ícones (traço no estilo Lucide), usados com <svg><use href="#i-nome"/></svg> -->
+  <svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <defs>
+      <symbol id="i-livro" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+      <symbol id="i-robo" viewBox="0 0 24 24"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></symbol>
+      <symbol id="i-simulado" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+      <symbol id="i-atividade" viewBox="0 0 24 24"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></symbol>
+      <symbol id="i-calendario" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/></symbol>
+      <symbol id="i-video" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/></symbol>
+      <symbol id="i-conversa" viewBox="0 0 24 24"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></symbol>
+      <symbol id="i-grafico" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></symbol>
+      <symbol id="i-engrenagem" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-sair" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-enviar" viewBox="0 0 24 24"><path d="M14.54 21.69a.5.5 0 0 0 .94-.03l6.5-19a.5.5 0 0 0-.64-.63l-19 6.5a.5.5 0 0 0-.02.93l7.93 3.18a2 2 0 0 1 1.11 1.11z"/><path d="m21.85 2.15-10.94 10.94"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+      <symbol id="i-mais" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+      <symbol id="i-sino" viewBox="0 0 24 24"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></symbol>
+      <symbol id="i-seta-esq" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+      <symbol id="i-grade" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></symbol>
+      <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+      <symbol id="i-seta-dir" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    </defs>
+  </svg>
+
   <!-- Barra do topo: só aparece no celular, para abrir a barra lateral -->
   <header class="barra-movel">
     <button type="button" id="abrir-lateral" class="botao-icone" aria-label="Abrir menu"
-      aria-controls="lateral" aria-expanded="false">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
-    <span class="logo"><span class="logo-icone">📚</span><strong>Assistente de Estudos</strong></span>
+      aria-controls="lateral" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
+    <span class="logo"><span class="logo-icone"><svg><use href="#i-livro"/></svg></span><strong>Assistente de Estudos</strong></span>
   </header>
 
   <div class="app">
     <aside class="lateral" id="lateral">
       <div class="lateral-logo">
-        <span class="logo-icone">📚</span>
+        <span class="logo-icone"><svg><use href="#i-livro"/></svg></span>
         <div class="logo-texto">
           <strong>Assistente de Estudos</strong>
           <small>Estude com IA</small>
@@ -29,30 +55,33 @@
       </div>
 
       <div class="lateral-meio">
-        <section>
+        <section class="grupo-lateral">
           <h2>Disciplina</h2>
           <div class="linha-disciplina">
             <select id="select-disciplina" aria-label="Disciplina"></select>
-            <button id="botao-nova-disciplina" type="button" title="Nova disciplina">+</button>
+            <button id="botao-nova-disciplina" type="button" class="botao-icone" title="Nova disciplina"
+              aria-label="Nova disciplina"><svg><use href="#i-mais"/></svg></button>
           </div>
           <button id="botao-remover-disciplina" type="button" class="link-perigo" hidden>Remover disciplina</button>
         </section>
 
-        <nav class="menu" id="menu" aria-label="Menu principal">
-          <h2>Menu</h2>
-          <button type="button" data-tela="assistente">🤖 <span>Assistente IA</span></button>
-          <button type="button" data-tela="simulados">❓ <span>Simulados</span></button>
-          <button type="button" data-tela="atividades">📝 <span>Atividades</span></button>
-          <button type="button" data-tela="calendario">📅 <span>Calendário</span></button>
-          <button type="button" data-tela="videos">🎬 <span>Videoaulas</span></button>
-          <button type="button" data-tela="turma">💬 <span>Chat da turma</span></button>
-          <button type="button" data-tela="painel" data-so-professor hidden>📊 <span>Painel da turma</span></button>
+        <nav class="menu grupo-lateral" id="menu" aria-label="Menu principal">
+          <h2>Estudar</h2>
+          <button type="button" data-tela="disciplinas"><svg><use href="#i-grade"/></svg><span>Minhas disciplinas</span></button>
+          <button type="button" data-tela="assistente"><svg><use href="#i-robo"/></svg><span>Assistente IA</span></button>
+          <button type="button" data-tela="simulados"><svg><use href="#i-simulado"/></svg><span>Simulados</span></button>
+          <button type="button" data-tela="atividades"><svg><use href="#i-atividade"/></svg><span>Atividades</span></button>
+          <button type="button" data-tela="videos"><svg><use href="#i-video"/></svg><span>Videoaulas</span></button>
+          <h2>Organizar</h2>
+          <button type="button" data-tela="calendario"><svg><use href="#i-calendario"/></svg><span>Calendário</span></button>
+          <button type="button" data-tela="turma"><svg><use href="#i-conversa"/></svg><span>Chat da turma</span></button>
+          <button type="button" data-tela="painel" data-so-professor hidden><svg><use href="#i-grafico"/></svg><span>Painel da turma</span></button>
         </nav>
 
-        <section id="secao-materiais" hidden>
+        <section id="secao-materiais" class="grupo-lateral" hidden>
           <h2>Materiais</h2>
           <label class="botao-upload">
-            + Enviar PDF
+            <svg><use href="#i-upload"/></svg> Enviar PDF
             <input type="file" id="input-pdf" accept=".pdf" multiple hidden>
           </label>
           <p id="status-upload" class="status"></p>
@@ -68,26 +97,67 @@
             <strong id="nome-usuario"></strong>
             <span id="tipo-usuario" class="selo"></span>
           </span>
-          <svg class="engrenagem" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="engrenagem" aria-hidden="true"><use href="#i-engrenagem"/></svg>
         </button>
-        <button type="button" id="botao-sair" class="botao-icone" title="Sair" aria-label="Sair">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
-        </button>
+        <button type="button" id="botao-sair" class="botao-icone" title="Sair" aria-label="Sair"><svg><use href="#i-sair"/></svg></button>
       </div>
     </aside>
     <div class="fundo-lateral" id="fundo-lateral" hidden></div>
 
     <!-- Cada <main class="tela"> é uma opção do menu; só uma fica visível -->
+    <main class="tela pagina" id="tela-disciplinas" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-grade"/></svg></span>
+        <div>
+          <h2>Minhas disciplinas</h2>
+          <p>Encontre uma disciplina, acompanhe seu progresso nas aulas e veja as atividades de cada uma.</p>
+        </div>
+      </header>
+
+      <div class="resumo-geral" id="resumo-geral"></div>
+
+      <div class="barra-busca">
+        <label class="campo-busca">
+          <svg><use href="#i-busca"/></svg>
+          <input type="search" id="busca-disciplinas" placeholder="Buscar disciplina, aula ou atividade..."
+            autocomplete="off" aria-label="Buscar disciplinas">
+          <kbd title="Atalho para buscar">/</kbd>
+        </label>
+        <div class="filtros" role="group" aria-label="Filtrar disciplinas">
+          <button type="button" class="filtro ativo" data-filtro="todas">Todas</button>
+          <button type="button" class="filtro" data-filtro="andamento">Em andamento</button>
+          <button type="button" class="filtro" data-filtro="pendencias">Com pendências</button>
+          <button type="button" class="filtro" data-filtro="concluidas">Concluídas</button>
+        </div>
+      </div>
+
+      <p class="contagem-busca" id="contagem-busca" aria-live="polite"></p>
+      <div class="grade-disciplinas" id="grade-disciplinas"></div>
+    </main>
+
     <main class="tela chat" id="tela-assistente">
+      <header class="cabecalho-pagina cabecalho-chat">
+        <span class="icone-pagina"><svg><use href="#i-robo"/></svg></span>
+        <div>
+          <h2>Assistente IA</h2>
+          <p id="assistente-subtitulo">Respostas baseadas nos PDFs da disciplina, com as fontes citadas.</p>
+        </div>
+      </header>
       <div id="mensagens"></div>
-      <form id="form-pergunta">
+      <form id="form-pergunta" class="compositor">
         <input type="text" id="input-pergunta" placeholder="Pergunte algo sobre o material..." autocomplete="off">
-        <button type="submit">Enviar</button>
+        <button type="submit"><svg><use href="#i-enviar"/></svg><span>Enviar</span></button>
       </form>
     </main>
 
     <main class="tela pagina" id="tela-simulados" hidden>
-      <h2>❓ Simulados</h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-simulado"/></svg></span>
+        <div>
+          <h2>Simulados</h2>
+          <p>Questões de múltipla escolha geradas a partir dos materiais, com correção e explicação.</p>
+        </div>
+      </header>
       <div class="precisa-disciplina">
         <form id="form-simulado" class="cartao-form linha-form">
           <label>Material <select id="simulado-arquivo" required></select></label>
@@ -99,18 +169,26 @@
           <button type="submit" class="botao-primario">Gerar simulado</button>
         </form>
         <div id="simulado-area"></div>
-        <h3>Meus resultados</h3>
+        <h3 class="titulo-secao">Meus resultados</h3>
         <div id="simulado-historico"></div>
       </div>
     </main>
 
     <main class="tela pagina" id="tela-atividades" hidden>
-      <h2>📝 Atividades</h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-atividade"/></svg></span>
+        <div>
+          <h2>Atividades</h2>
+          <p>Tarefas publicadas pelo professor, com prazo de entrega e correção.</p>
+        </div>
+      </header>
       <div class="precisa-disciplina">
         <form id="form-atividade" class="cartao-form" data-so-professor hidden>
           <h3>Nova atividade</h3>
-          <label>Título <input type="text" name="titulo" required maxlength="150"></label>
-          <label>Prazo de entrega <input type="date" name="prazo" required></label>
+          <div class="linha-campos">
+            <label>Título <input type="text" name="titulo" required maxlength="150"></label>
+            <label>Prazo de entrega <input type="date" name="prazo" required></label>
+          </div>
           <label>Enunciado <textarea name="descricao" rows="4" maxlength="5000"></textarea></label>
           <button type="submit" class="botao-primario">Publicar atividade</button>
         </form>
@@ -119,20 +197,24 @@
     </main>
 
     <main class="tela pagina" id="tela-calendario" hidden>
-      <div class="titulo-com-acao">
-        <h2>📅 Calendário</h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-calendario"/></svg></span>
+        <div>
+          <h2>Calendário</h2>
+          <p>Aulas, provas, prazos e lembretes nos dias e horários que você escolher.</p>
+        </div>
         <button type="button" id="botao-notificacoes" class="botao-secundario" hidden>🔔 Ativar notificações</button>
-      </div>
+      </header>
       <div class="precisa-disciplina">
         <!-- Cartão de agendamento: dias à esquerda, horários à direita, resumo embaixo -->
         <section class="agenda">
           <div class="agenda-corpo">
             <div class="agenda-calendario">
               <div class="calendario-topo">
-                <button type="button" id="mes-anterior" aria-label="Mês anterior">‹</button>
                 <strong id="mes-titulo"></strong>
-                <button type="button" id="mes-seguinte" aria-label="Próximo mês">›</button>
                 <button type="button" id="mes-hoje">Hoje</button>
+                <button type="button" id="mes-anterior" aria-label="Mês anterior"><svg><use href="#i-seta-esq"/></svg></button>
+                <button type="button" id="mes-seguinte" aria-label="Próximo mês"><svg><use href="#i-seta-dir"/></svg></button>
               </div>
               <div class="legenda">
                 <span><i class="ponto turma"></i> Turma</span>
@@ -168,20 +250,28 @@
           </form>
         </section>
 
-        <h3 id="dia-titulo">Próximos eventos</h3>
+        <h3 id="dia-titulo" class="titulo-secao">Próximos eventos</h3>
         <div id="lista-eventos"></div>
       </div>
     </main>
 
     <main class="tela pagina" id="tela-videos" hidden>
-      <h2>🎬 Videoaulas</h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-video"/></svg></span>
+        <div>
+          <h2>Videoaulas</h2>
+          <p>Vídeos indicados pelo professor para complementar o material.</p>
+        </div>
+      </header>
       <div class="precisa-disciplina">
         <form id="form-video" class="cartao-form" data-so-professor hidden>
           <h3>Adicionar videoaula</h3>
-          <label>Título <input type="text" name="titulo" required maxlength="150"></label>
-          <label>Link do vídeo <small>(YouTube ou outro site)</small>
-            <input type="url" name="url" required placeholder="https://www.youtube.com/watch?v=...">
-          </label>
+          <div class="linha-campos">
+            <label>Título <input type="text" name="titulo" required maxlength="150"></label>
+            <label>Link do vídeo <small>(YouTube ou outro site)</small>
+              <input type="url" name="url" required placeholder="https://www.youtube.com/watch?v=...">
+            </label>
+          </div>
           <label>Descrição <textarea name="descricao" rows="2" maxlength="1000"></textarea></label>
           <button type="submit" class="botao-primario">Adicionar</button>
         </form>
@@ -190,18 +280,28 @@
     </main>
 
     <main class="tela chat" id="tela-turma" hidden>
-      <div class="chat-turma-topo">
-        <h2>💬 Chat da turma <small id="turma-disciplina"></small></h2>
-      </div>
+      <header class="cabecalho-pagina cabecalho-chat">
+        <span class="icone-pagina"><svg><use href="#i-conversa"/></svg></span>
+        <div>
+          <h2>Chat da turma <small id="turma-disciplina"></small></h2>
+          <p>Converse com colegas e professores da disciplina.</p>
+        </div>
+      </header>
       <div id="mensagens-turma" class="precisa-disciplina"></div>
-      <form id="form-turma" class="precisa-disciplina">
+      <form id="form-turma" class="precisa-disciplina compositor">
         <input type="text" id="input-turma" placeholder="Escreva para a turma..." autocomplete="off" maxlength="1000">
-        <button type="submit">Enviar</button>
+        <button type="submit"><svg><use href="#i-enviar"/></svg><span>Enviar</span></button>
       </form>
     </main>
 
     <main class="tela pagina" id="tela-painel" hidden>
-      <h2>📊 Painel da turma: <span id="painel-disciplina"></span></h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-grafico"/></svg></span>
+        <div>
+          <h2>Painel da turma</h2>
+          <p>Desempenho e dúvidas dos alunos em <strong id="painel-disciplina"></strong>.</p>
+        </div>
+      </header>
       <div class="precisa-disciplina">
         <div class="abas">
           <button type="button" class="aba ativa" data-aba="notas">Notas dos simulados</button>
@@ -212,7 +312,13 @@
     </main>
 
     <main class="tela pagina" id="tela-config" hidden>
-      <h2>⚙️ Configurações</h2>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-engrenagem"/></svg></span>
+        <div>
+          <h2>Configurações</h2>
+          <p>Seu perfil, sua senha e a aparência do sistema.</p>
+        </div>
+      </header>
       <div class="colunas">
         <form id="form-perfil" class="cartao-form">
           <h3>Perfil</h3>
@@ -238,10 +344,10 @@
 
         <div class="cartao-form">
           <h3>Aparência</h3>
-          <fieldset class="tipo">
-            <legend>Tema</legend>
-            <label><input type="radio" name="tema" value="claro"> ☀️ Claro</label>
-            <label><input type="radio" name="tema" value="escuro"> 🌙 Escuro</label>
+          <fieldset class="escolha-tema">
+            <legend class="rotulo">Tema</legend>
+            <label><input type="radio" name="tema" value="claro"><span>☀️ Claro</span></label>
+            <label><input type="radio" name="tema" value="escuro"><span>🌙 Escuro</span></label>
           </fieldset>
         </div>
 
@@ -259,6 +365,7 @@
   <div id="avisos" class="avisos" aria-live="polite"></div>
 
   <script src="app.js"></script>
+  <script src="disciplinas.js"></script>
   <script src="simulados.js"></script>
   <script src="atividades.js"></script>
   <script src="calendario.js"></script>

@@ -163,7 +163,7 @@ async function iniciar() {
   }
   let telaSalva = null;
   try { telaSalva = localStorage.getItem("tela"); } catch {}
-  telaAtual = TELAS[telaSalva] ? telaSalva : "assistente";
+  telaAtual = TELAS[telaSalva] ? telaSalva : "disciplinas";
   await carregarDisciplinas(disciplinaLembrada());
 }
 
@@ -203,16 +203,40 @@ function selecionarDisciplina(disciplina) {
   formPergunta.querySelector("button").disabled = !temDisciplina;
   atualizarAreasDaDisciplina();
 
+  $("assistente-subtitulo").textContent = temDisciplina
+    ? `${disciplina.nome} · respostas baseadas nos PDFs, com as fontes citadas.`
+    : "Respostas baseadas nos PDFs da disciplina, com as fontes citadas.";
+
   if (!temDisciplina) {
     adicionarMensagem("bot", `Olá, ${escaparHtml(usuario.nome)}! Crie uma disciplina no botão <strong>+</strong> ao lado para começar.`);
   } else {
     lembrarDisciplina(disciplina.id);
-    adicionarMensagem("bot",
-      `Você está em <strong>${escaparHtml(disciplina.nome)}</strong>. Envie os PDFs das aulas e faça perguntas: ` +
-      `vou responder citando de onde tirei cada informação.`);
+    mostrarBoasVindas(disciplina);
     carregarDocumentos();
   }
   mostrarTela(telaAtual);  // recarrega a tela aberta com os dados da nova disciplina
+}
+
+// Cartão inicial do chat, com perguntas prontas para o aluno não começar do zero
+const SUGESTOES = [
+  "Quais são os principais conceitos deste material?",
+  "Explique o conteúdo da primeira aula de forma simples",
+  "Crie 3 perguntas para eu revisar a matéria",
+];
+
+function mostrarBoasVindas(disciplina) {
+  const primeiroNome = usuario.nome.trim().split(/\s+/)[0];
+  const cartao = adicionarMensagem("bot boas-vindas", `
+    <p class="boas-vindas-titulo">Olá, ${escaparHtml(primeiroNome)}! 👋</p>
+    <p>Você está em <strong>${escaparHtml(disciplina.nome)}</strong>. Pergunte qualquer coisa sobre os PDFs da disciplina:
+      eu respondo citando o arquivo e a página de onde tirei cada informação.</p>
+    <div class="sugestoes">${SUGESTOES.map((s) => `<button type="button" class="sugestao">${escaparHtml(s)}</button>`).join("")}</div>`);
+  for (const botao of cartao.querySelectorAll(".sugestao")) {
+    botao.onclick = () => {
+      inputPergunta.value = botao.textContent;
+      formPergunta.requestSubmit();
+    };
+  }
 }
 
 selectDisciplina.onchange = () => {
@@ -252,11 +276,28 @@ async function carregarDocumentos() {
         <button class="remover" title="Remover">✕</button>
       </div>
       <small>${doc.trechos} trechos · enviado por ${escaparHtml(doc.enviado_por)}</small>
+      <label class="marcar-estudada"><input type="checkbox" ${doc.concluida ? "checked" : ""}> Aula estudada</label>
       <div class="acoes">
         <button data-acao="resumo">📝 Resumo</button>
         <button data-acao="flashcards">🃏 Flashcards</button>
         <button data-acao="simulado">❓ Simulado</button>
       </div>`;
+    if (doc.concluida) li.classList.add("concluida");
+    li.querySelector(".marcar-estudada input").onchange = async (e) => {
+      li.classList.toggle("concluida", e.target.checked);
+      try {
+        await chamarApi(`/api/aulas/${doc.id}/concluida`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ concluida: e.target.checked }),
+        });
+        visaoGeral = [];  // a tela "Minhas disciplinas" recarrega o progresso ao ser aberta
+      } catch (erro) {
+        e.target.checked = !e.target.checked;
+        li.classList.toggle("concluida", e.target.checked);
+        alert(erro.message);
+      }
+    };
     li.querySelector(".remover").onclick = async () => {
       if (!confirm(`Remover ${doc.arquivo}?`)) return;
       await chamarApi(rotaDisciplina(`/documentos/${encodeURIComponent(doc.arquivo)}`), { method: "DELETE" });
