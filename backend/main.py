@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from google.genai.errors import APIError
 from pydantic import BaseModel, Field
 
-from . import auth, config, db, demo, estudo, rag, turma
+from . import auth, config, db, demo, estudo, rag, suporte, turma
 from .auth import somente_professor, usuario_atual
 
 db.criar_tabelas()
@@ -22,6 +22,7 @@ for _disciplina_demo in db.consultar("SELECT id FROM disciplinas"):
 app = FastAPI(title="Assistente de Estudos")
 app.include_router(auth.router)
 app.include_router(turma.router)
+app.include_router(suporte.router)
 
 
 # Erros conhecidos viram mensagens legíveis para o frontend
@@ -283,6 +284,22 @@ def notas_dos_alunos(disciplina_id: int, professor: dict = Depends(somente_profe
            ORDER BY r.criado_em DESC LIMIT 200""",
         (disciplina_id,),
     )
+
+
+# ---------------------------------------------------------------- sobre a IA
+
+@app.get("/api/ia/sobre")
+def sobre_a_ia(usuario: dict = Depends(usuario_atual)):
+    """Modelos e parâmetros em uso, mostrados na tela "Sobre o assistente IA"."""
+    return {
+        "provedor": "Google Gemini",
+        "modelo": config.GEMINI_MODEL,
+        "modelos_reserva": config.GEMINI_MODELOS_RESERVA,
+        "modelo_embeddings": config.GEMINI_EMBED_MODEL,
+        "tamanho_trecho": config.TAMANHO_TRECHO,
+        "sobreposicao": config.SOBREPOSICAO,
+        "top_k": config.TOP_K,
+    }
 
 
 # O próprio FastAPI serve o frontend (HTML/CSS/JS). Precisa ficar por último.
