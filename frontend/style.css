@@ -844,6 +844,190 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 .msg-turma .hora { margin-top: 3px; font-size: .66rem; opacity: .7; text-align: right; }
 #mensagens-turma { gap: 10px; }
 
+/* Cursor de mira em "Minhas disciplinas": adaptação do TargetCursor (React Bits), ver cursor-alvo.js.
+   Branco com mix-blend-mode: difference fica escuro no tema claro e claro no escuro. */
+.com-cursor-alvo, .com-cursor-alvo * { cursor: none !important; }
+.cursor-alvo {
+  position: fixed; top: 0; left: 0; z-index: 2147483647; width: 0; height: 0;
+  pointer-events: none; mix-blend-mode: difference; opacity: 0; transition: opacity .15s;
+}
+.cursor-alvo.visivel { opacity: 1; }
+.cursor-alvo-ponto {
+  position: absolute; left: -2px; top: -2px; width: 4px; height: 4px; border-radius: 50%;
+  background: #fff; transition: transform .3s ease;
+}
+.cursor-alvo.pressionado .cursor-alvo-ponto { transform: scale(.7); }
+.cursor-alvo-canto {
+  position: absolute; left: 0; top: 0; width: 12px; height: 12px; box-sizing: border-box;
+  border: 3px solid #fff; will-change: transform;
+}
+.cursor-alvo-canto:nth-of-type(2) { border-right: none; border-bottom: none; }
+.cursor-alvo-canto:nth-of-type(3) { border-left: none; border-bottom: none; }
+.cursor-alvo-canto:nth-of-type(4) { border-left: none; border-top: none; }
+.cursor-alvo-canto:nth-of-type(5) { border-right: none; border-top: none; }
+
+/* Borda com estrela em Simulados e Atividades: adaptação em CSS puro do StarBorder (React Bits).
+   Em vez de divs extras, ::before (borda de cima) e ::after (borda de baixo) carregam um brilho
+   que desliza pela borda; a máscara recorta tudo menos um anel da espessura da borda. */
+:root { --estrela: #6366f1; --estrela-espessura: 2px; --estrela-velocidade: 6s; }
+:root[data-tema="escuro"] { --estrela: #c7d2fe; }
+:is(#tela-simulados, #tela-atividades) :is(.cartao-form, .bloco, .item-atividade),
+#tela-simulados table { position: relative; }
+:is(#tela-simulados, #tela-atividades) :is(.cartao-form, .bloco, .item-atividade)::before,
+:is(#tela-simulados, #tela-atividades) :is(.cartao-form, .bloco, .item-atividade)::after,
+#tela-simulados table::before, #tela-simulados table::after {
+  content: ""; position: absolute; inset: -1px; z-index: 1; pointer-events: none;
+  padding: var(--estrela-espessura); border-radius: inherit;
+  background: radial-gradient(closest-side, var(--estrela), transparent) no-repeat;
+  background-size: 45% 28px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: var(--estrela-velocidade) linear infinite alternate;
+}
+:is(#tela-simulados, #tela-atividades) :is(.cartao-form, .bloco, .item-atividade)::before,
+#tela-simulados table::before { background-position-y: -14px; animation-name: estrela-cima; }
+:is(#tela-simulados, #tela-atividades) :is(.cartao-form, .bloco, .item-atividade)::after,
+#tela-simulados table::after { background-position-y: calc(100% + 14px); animation-name: estrela-baixo; }
+/* Com background-size de 45%, -100% põe o brilho todo à esquerda e 200% todo à direita */
+@keyframes estrela-cima {
+  from { background-position-x: -100%; opacity: 1; }
+  to   { background-position-x: 200%; opacity: 0; }
+}
+@keyframes estrela-baixo {
+  from { background-position-x: 200%; opacity: 1; }
+  to   { background-position-x: -100%; opacity: 0; }
+}
+
+/* Sobre o assistente IA */
+.aviso-ia { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; font-size: .74rem !important; }
+.link-ia {
+  padding: 0; border: none; background: none; color: var(--destaque); font-size: inherit; font-weight: 500;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.link-ia:hover { color: var(--destaque-forte); }
+.identificacao-ia {
+  padding: 24px; border: 1px solid color-mix(in srgb, var(--destaque) 30%, var(--borda)); border-radius: var(--raio-g);
+  background: linear-gradient(135deg, var(--destaque-claro), var(--painel) 70%); box-shadow: var(--sombra-1);
+}
+.identificacao-ia { text-align: center; }
+.identificacao-ia > p { margin: 14px auto 18px; color: var(--texto-2); line-height: 1.6; max-width: 70ch; }
+.selo-ia {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: var(--gradiente); color: #fff; font-size: .82rem; font-weight: 600;
+}
+.selo-ia svg { width: 16px; height: 16px; }
+.ficha-ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 0; }
+.ficha-ia div { padding: 10px 14px; border: 1px solid var(--borda); border-radius: var(--raio); background: var(--painel); }
+.ficha-ia dt { font-size: .74rem; font-weight: 600; color: var(--suave); text-transform: uppercase; letter-spacing: .04em; }
+.ficha-ia dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+.passos-ia {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;
+  margin: 0 auto 10px; padding: 0; list-style: none; counter-reset: passo;
+}
+@media (max-width: 1000px) { .passos-ia { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .passos-ia { grid-template-columns: 1fr; } }
+.passos-ia li {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px; counter-increment: passo;
+  text-align: center;
+  background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio-g); box-shadow: var(--sombra-1);
+}
+.passos-ia li::before {
+  content: counter(passo); display: grid; place-items: center; width: 26px; height: 26px; margin-bottom: 4px;
+  border-radius: 50%; background: var(--destaque-claro); color: var(--destaque); font-size: .8rem; font-weight: 700;
+}
+.passos-ia span { color: var(--texto-2); font-size: .88rem; }
+.colunas-ia { margin-top: 36px; }
+.lista-ia { margin: 0; padding-left: 20px; color: var(--texto-2); font-size: .9rem; display: flex; flex-direction: column; gap: 6px; }
+.lista-ia.pode, .lista-ia.nao-pode { list-style: none; padding-left: 0; }
+.lista-ia.pode li::before { content: "✓  "; color: var(--certo-texto); font-weight: 700; }
+.lista-ia.nao-pode li::before { content: "✗  "; color: var(--perigo); font-weight: 700; }
+
+/* Brilho ao passar o mouse: adaptação em CSS puro do GlareHover (React Bits).
+   Usa ::after porque os passos já usam ::before para o número. */
+.glare { --glare-cor: rgba(99, 102, 241, .16); position: relative; overflow: hidden; }
+:root[data-tema="escuro"] .glare { --glare-cor: rgba(255, 255, 255, .12); }
+.glare::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(-45deg, transparent 60%, var(--glare-cor) 70%, transparent, transparent 100%)
+    -100% -100% / 250% 250% no-repeat;
+  transition: background-position .65s ease;
+}
+.glare:hover::after { background-position: 100% 100%; }
+.passos-ia li.glare, .colunas-ia .glare, .ficha-ia .glare { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.passos-ia li.glare:hover, .colunas-ia .glare:hover, .ficha-ia .glare:hover {
+  transform: translateY(-2px); box-shadow: var(--sombra-2); border-color: var(--borda-forte);
+}
+
+/* Brilho especular na borda dos cartões do Suporte: adaptação do SpecularButton (React Bits).
+   brilho-especular.js define --luz (conic-gradient apontado para o ponteiro) e --luz-forca
+   (0 longe, 1 perto); a máscara deixa só um anel fino na borda. */
+:root { --luz-cor: #6366f1; }
+:root[data-tema="escuro"] { --luz-cor: #ffffff; }
+#tela-suporte :is(.item-faq, #form-chamado, .chamado) { position: relative; }
+#tela-suporte :is(.item-faq, #form-chamado, .chamado)::before {
+  content: ""; position: absolute; inset: -1px; z-index: 1; pointer-events: none;
+  padding: 1.5px; border-radius: inherit;
+  background: var(--luz, none); opacity: var(--luz-forca, 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+
+/* Listas animadas do Suporte: adaptação do AnimatedList (React Bits), ver lista-animada.js */
+.lista-animada { position: relative; }
+.lista-animada::before, .lista-animada::after {
+  content: ""; position: absolute; left: 0; right: 0; z-index: 2; pointer-events: none; transition: opacity .3s ease;
+}
+.lista-animada::before { top: 0; height: 50px; background: linear-gradient(to bottom, var(--fundo), transparent); opacity: var(--esmaecer-topo, 0); }
+.lista-animada::after { bottom: 0; height: 100px; background: linear-gradient(to top, var(--fundo), transparent); opacity: var(--esmaecer-base, 0); }
+.lista-animada-rolagem {
+  max-height: 440px; overflow-y: auto; padding: 6px 8px 6px 4px; scroll-padding-block: 50px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.lista-animada-rolagem:focus-visible { outline-offset: 4px; border-radius: var(--raio); }
+.lista-animada-rolagem::-webkit-scrollbar { width: 8px; }
+.lista-animada-rolagem::-webkit-scrollbar-thumb { background: var(--borda-forte); border-radius: 4px; }
+.item-animado {
+  opacity: 0; transform: scale(.7);
+  transition: opacity .2s ease .1s, transform .2s ease .1s, border-color .15s, background-color .15s, box-shadow .15s;
+}
+.item-animado.visivel { opacity: 1; transform: none; }
+.item-animado.selecionado { border-color: color-mix(in srgb, var(--destaque) 45%, var(--borda)); box-shadow: var(--sombra-2); }
+.item-animado:focus-visible, .item-animado summary:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+.chamado.item-animado { margin-bottom: 0; }
+
+/* Revelação ao rolar na aba "Sobre o assistente IA" (ver sobre-ia.js). Usa animation e a
+   propriedade translate, sem mexer em transition/transform, que o hover dos cartões usa. */
+.revelar { opacity: 0; }
+.revelar.revelado { animation: surgir .6s cubic-bezier(.2, .7, .2, 1) var(--atraso-revelar, 0ms) both; }
+@keyframes surgir {
+  from { opacity: 0; translate: 0 28px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@media (prefers-reduced-motion: reduce) { .revelar { opacity: 1; } }
+
+/* Suporte */
+.busca-faq { margin-bottom: 4px; }
+.faq { display: flex; flex-direction: column; gap: 8px; }
+.item-faq {
+  background: var(--painel); border: 1px solid var(--borda); border-radius: var(--raio); box-shadow: var(--sombra-1);
+  transition: border-color .15s;
+}
+.item-faq[open] { border-color: var(--borda-forte); }
+.item-faq summary { padding: 14px 18px; font-weight: 600; cursor: pointer; }
+.item-faq summary:hover { color: var(--destaque); }
+.item-faq p { margin: 0; padding: 0 18px 16px; color: var(--texto-2); line-height: 1.6; }
+.chamado .item-topo .linha-botoes { margin-top: 0; flex-wrap: nowrap; }
+.resposta-suporte {
+  margin-top: 12px; padding: 12px 16px; border-left: 3px solid var(--cor-pessoal); border-radius: var(--raio-p);
+  background: var(--painel-2); font-size: .85rem; color: var(--suave);
+}
+.resposta-suporte strong { color: var(--certo-texto); }
+.resposta-suporte p { margin: 6px 0 0; color: var(--texto); white-space: pre-wrap; font-size: .92rem; }
+.form-resposta-suporte { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+.form-resposta-suporte textarea { flex: 1; }
+
 /* ---------- 7. responsivo e acessibilidade ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -905,4 +1089,6 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
   .agenda-rodape { padding: 16px; }
   .grade-videos { grid-template-columns: 1fr; }
   .linha-correcao { flex-wrap: wrap; }
+  .form-resposta-suporte { flex-direction: column; align-items: stretch; }
+  .campo-busca { min-width: 0; }
 }

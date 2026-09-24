@@ -1,5 +1,5 @@
 // Adaptação em CSS/JS puro do OriginButton, sem dependência de React.
-const EXCLUIR_ORIGEM = ".botao-icone, .link-perigo, .remover, .dia, .horario, .conta";
+const EXCLUIR_ORIGEM = ".botao-icone, .link-perigo, .link-ia, .remover, .dia, .horario, .conta";
 
 function prepararBotaoOrigem(botao) {
   if (botao.classList.contains("botao-origem") || botao.matches(EXCLUIR_ORIGEM) || botao.closest(".menu")) return;

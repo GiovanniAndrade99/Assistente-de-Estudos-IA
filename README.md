@@ -15,6 +15,9 @@ generativa (Gemini):
   - **Videoaulas**: professor cadastra links (vídeos do YouTube tocam na própria página)
   - **Chat da turma**: conversa entre alunos e professor (atualiza a cada 4 s)
   - **Configurações**: nome, troca de senha, tema claro/escuro e encerrar outras sessões
+  - **Sobre o assistente IA**: identifica a IA, mostra os modelos em uso e explica onde ela é usada,
+    o que faz e não faz, o destino dos dados e o uso responsável
+  - **Suporte**: perguntas frequentes com busca e chamados (administradores respondem)
 
 ## Arquitetura
 
@@ -31,7 +34,9 @@ generativa (Gemini):
    ├─ /api/disciplinas/{id}/flashcards   → documento inteiro → Gemini (JSON) → cartões
    ├─ /api/disciplinas/{id}/simulado     → documento inteiro → Gemini (JSON) → questões
    ├─ /api/disciplinas/{id}/{eventos|atividades|videos|mensagens} → recursos da turma
-   └─ /api/professor/{notas|perguntas}   → painel da turma (só professores)
+   ├─ /api/professor/{notas|perguntas}   → painel da turma (só professores)
+   ├─ /api/suporte/chamados              → abrir, listar, responder (admin) e remover chamados
+   └─ /api/ia/sobre                      → modelos e parâmetros da IA em uso
         │
         ├──► SQLite (data/app.db): usuários, sessões, disciplinas, documentos, histórico
         ├──► Banco vetorial próprio (NumPy, data/indice): trechos + embeddings
@@ -49,6 +54,7 @@ assistente-estudos/
 │   ├── rag.py       # pipeline RAG: extração, trechos, embeddings, busca, resposta
 │   ├── estudo.py    # resumo, flashcards e simulado
 │   ├── turma.py     # calendário, atividades, videoaulas e chat da turma
+│   ├── suporte.py   # chamados de suporte
 │   ├── vetores.py   # banco vetorial com NumPy (similaridade de cosseno)
 │   ├── prompts.py   # todos os prompts do projeto
 │   └── config.py    # chaves, modelos e parâmetros (tamanho do trecho, top-k...)
@@ -57,6 +63,7 @@ assistente-estudos/
 │   ├── index.html / app.js     # app principal: menu, assistente IA e painel do professor
 │   ├── simulados.js / atividades.js / calendario.js
 │   ├── videos.js / turma.js / config.js   # uma tela do menu em cada arquivo
+│   ├── sobre-ia.js / suporte.js
 │   └── style.css
 ├── docs/
 │   ├── prompts.md                # histórico de versões dos prompts (para o relatório)
