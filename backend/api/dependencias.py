@@ -14,6 +14,6 @@ def usuario_atual(request: Request) -> dict:
 
 
 def somente_professor(usuario: dict = Depends(usuario_atual)) -> dict:
-    if usuario["tipo"] != "professor":
+    if usuario["tipo"] != "professor" and not usuario.get("administrador"):
         raise HTTPException(403, "Área restrita a professores.")
     return usuario

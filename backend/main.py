@@ -1,8 +1,8 @@
 """API do Assistente de Estudos (FastAPI).
 
 Rodar a partir da pasta raiz do projeto:
-    uvicorn backend.main:app --reload
-e abrir http://localhost:8000
+    uvicorn backend.main:app --reload --port 8002
+e abrir http://localhost:8002
 
 Este arquivo é só a "montagem" da aplicação (app factory): configura logging,
 registra a middleware de observabilidade, inclui os routers e os exception
@@ -17,6 +17,7 @@ from .api import (
     auth_router, chat_router, disciplinas_router, documentos_router,
     estudo_router, professor_router, progresso_router, saude_router, turma_router,
 )
+from .aplicacao import demo_service
 from .excecoes import registrar_handlers
 from .infraestrutura import db
 from .infraestrutura.logging_setup import configurar_logging
@@ -24,6 +25,8 @@ from .middlewares.observabilidade import ObservabilidadeMiddleware
 
 configurar_logging(config.LOG_LEVEL)
 db.criar_tabelas()
+for _disciplina in db.consultar("SELECT id FROM disciplinas"):
+    demo_service.popular_dados_demo(_disciplina["id"])
 
 app = FastAPI(title="Assistente de Estudos")
 app.add_middleware(ObservabilidadeMiddleware)

@@ -13,6 +13,7 @@ funcionar igual com múltiplos processos/workers.
 """
 import logging
 import re
+import sqlite3
 
 from fastapi import HTTPException
 
@@ -72,7 +73,7 @@ def usuario_da_sessao(token: str | None) -> dict | None:
     if not token:
         return None
     return db.consultar_um(
-        """SELECT u.id, u.nome, u.email, u.tipo FROM sessoes s
+        """SELECT u.id, u.nome, u.email, u.tipo, u.administrador FROM sessoes s
            JOIN usuarios u ON u.id = s.usuario_id
            WHERE s.token = ? AND (s.expires_at IS NULL OR s.expires_at > CURRENT_TIMESTAMP)""",
         (hash_token(token),),
@@ -104,13 +105,16 @@ def cadastrar(nome: str, email: str, senha: str, tipo: str) -> tuple[dict, str, 
     if db.consultar_um("SELECT id FROM usuarios WHERE email = ?", (email,)):
         raise HTTPException(400, "Este e-mail já está cadastrado.")
 
-    usuario_id = db.executar(
-        "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
-        (nome, email, gerar_hash_senha(senha), tipo),
-    )
+    try:
+        usuario_id = db.executar(
+            "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
+            (nome, email, gerar_hash_senha(senha), tipo),
+        )
+    except sqlite3.IntegrityError as erro:  # dois cadastros simultâneos com o mesmo e-mail
+        raise HTTPException(400, "Este e-mail já está cadastrado. Entre na conta ou use outro e-mail.") from erro
     token, duracao = _iniciar_sessao(usuario_id)
     logger.info("usuario_cadastrado", extra={"usuario_id": usuario_id, "tipo": tipo})
-    return {"id": usuario_id, "nome": nome, "email": email, "tipo": tipo}, token, duracao
+    return {"id": usuario_id, "nome": nome, "email": email, "tipo": tipo, "administrador": 0}, token, duracao
 
 
 def entrar(email: str, senha: str) -> tuple[dict, str, int]:
@@ -124,7 +128,7 @@ def entrar(email: str, senha: str) -> tuple[dict, str, int]:
         raise HTTPException(401, "E-mail ou senha incorretos.")
     token, duracao = _iniciar_sessao(usuario["id"])
     logger.info("login_ok", extra={"usuario_id": usuario["id"]})
-    return {k: usuario[k] for k in ("id", "nome", "email", "tipo")}, token, duracao
+    return {k: usuario[k] for k in ("id", "nome", "email", "tipo", "administrador")}, token, duracao
 
 
 # ---------------------------------------------------------------- conta

@@ -5,6 +5,7 @@ from fastapi import HTTPException
 
 from .. import config
 from ..infraestrutura import db, rag
+from . import demo_service
 
 
 def disciplina_ou_404(disciplina_id: int) -> dict:
@@ -30,6 +31,7 @@ def criar_disciplina(nome: str, usuario_id: int) -> dict:
     if db.consultar_um("SELECT id FROM disciplinas WHERE nome = ?", (nome,)):
         raise HTTPException(400, "Já existe uma disciplina com esse nome.")
     novo_id = db.executar("INSERT INTO disciplinas (nome, criado_por) VALUES (?, ?)", (nome, usuario_id))
+    demo_service.popular_dados_demo(novo_id)
     return {"id": novo_id, "nome": nome}
 
 

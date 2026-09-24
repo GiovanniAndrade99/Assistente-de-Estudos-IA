@@ -140,10 +140,16 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows  (Linux/Mac: source .venv/bin/activate)
 pip install -r requirements.txt
 copy .env.example .env          # depois edite o .env e cole a chave
-uvicorn backend.main:app --reload
+uvicorn backend.main:app --reload --port 8002
 ```
 
-4. Abra http://localhost:8000
+4. Abra http://localhost:8002
+
+### Criar uma conta administrativa
+
+Com o ambiente virtual ativado e na pasta raiz do projeto, execute `python -m scripts.criar_admin`.
+O comando pede nome, e-mail e senha no terminal; a senha não é exibida nem salva em texto puro.
+Administradores têm acesso às funções de professor.
 
 ## Dados de demonstração: curso de Ciência da Computação
 
