@@ -38,6 +38,59 @@
   color-scheme: light;
 }
 
+/* Botões de ação no estilo Origin: preenchimento circular parte do ponteiro. */
+button.botao-origem {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: var(--painel);
+  color: var(--texto);
+  font-weight: 500;
+  transition: color .3s cubic-bezier(.16, 1, .3, 1), border-color .3s cubic-bezier(.16, 1, .3, 1), transform .15s ease;
+}
+button.botao-origem::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: var(--origem-y, 50%);
+  left: var(--origem-x, 50%);
+  width: var(--origem-diametro, 0px);
+  height: var(--origem-diametro, 0px);
+  border-radius: 50%;
+  background: var(--texto);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform .5s cubic-bezier(.16, 1, .3, 1);
+  pointer-events: none;
+}
+button.botao-origem:hover,
+button.botao-origem:focus-visible,
+button.botao-origem[data-pressionado="true"] {
+  border-color: var(--texto);
+  background-color: transparent;
+  color: var(--fundo);
+}
+button.botao-origem:hover::before,
+button.botao-origem:focus-visible::before,
+button.botao-origem[data-pressionado="true"]::before { transform: translate(-50%, -50%) scale(1); }
+button.botao-origem:active:not(:disabled) { transform: scale(.985); }
+button.botao-origem:disabled { cursor: not-allowed; }
+button.botao-origem .conteudo-botao-origem { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  button.botao-origem, button.botao-origem::before { transition-duration: .01ms; }
+}
+
+/* Regras de hover específicas de formulários não devem interromper o efeito. */
+button.botao-origem:hover,
+button.botao-origem:focus-visible,
+button.botao-origem[data-pressionado="true"] {
+  background-color: transparent !important;
+  color: var(--fundo) !important;
+  border-color: var(--texto) !important;
+}
+.compositor button.botao-origem .conteudo-botao-origem { display: inline-flex !important; }
+
 /* Tema escuro (escolhido em Configurações; salvo no navegador) */
 :root[data-tema="escuro"] {
   --fundo: #0c0e14;
@@ -390,6 +443,8 @@ input[type=radio], input[type=checkbox] { accent-color: var(--destaque); }
 }
 .cabecalho-chat .icone-pagina { width: 40px; height: 40px; border-radius: 11px; }
 .cabecalho-chat .icone-pagina svg { width: 20px; height: 20px; }
+.cabecalho-chat .avatar-logo-assistente { border-radius: 50%; background: var(--gradiente); color: #fff; }
+.cabecalho-chat .avatar-logo-assistente svg { width: 22px; height: 22px; }
 .cabecalho-chat h2 { font-size: 1.1rem; }
 .cabecalho-chat p { font-size: .85rem; }
 
@@ -401,9 +456,15 @@ input[type=radio], input[type=checkbox] { accent-color: var(--destaque); }
 
 .mensagem { max-width: 100%; padding: 12px 16px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mensagem.usuario {
-  align-self: flex-end; max-width: 80%;
+  position: relative; align-self: flex-end; max-width: calc(80% - 44px); margin-right: 44px;
   background: var(--destaque); color: var(--destaque-texto);
   border-radius: 18px 18px 4px 18px; box-shadow: var(--sombra-2);
+}
+.mensagem.usuario::after {
+  content: attr(data-avatar); position: absolute; top: 0; right: -44px;
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--avatar-cor, var(--gradiente)); color: #fff; font-size: .72rem; font-weight: 700;
+  letter-spacing: .02em; box-shadow: var(--sombra-1);
 }
 /* Mensagens do assistente levam um avatar à esquerda */
 .mensagem.bot {
@@ -412,11 +473,11 @@ input[type=radio], input[type=checkbox] { accent-color: var(--destaque); }
   border-radius: 4px 18px 18px 18px; box-shadow: var(--sombra-1);
 }
 .mensagem.bot::before {
-  content: ""; position: absolute; left: -44px; top: 0; width: 32px; height: 32px;
-  border-radius: 10px; background: var(--gradiente);
+  content: ""; position: absolute; left: -44px; top: 0; width: 36px; height: 36px;
+  border-radius: 50%; background: var(--gradiente); box-shadow: var(--sombra-1);
 }
 .mensagem.bot::after {
-  content: ""; position: absolute; left: -37px; top: 7px; width: 18px; height: 18px; background: #fff;
+  content: ""; position: absolute; left: -36px; top: 8px; width: 20px; height: 20px; background: #fff;
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 8V4H8'/%3E%3Crect width='16' height='12' x='4' y='8' rx='2'/%3E%3Cpath d='M2 14h2M20 14h2M15 13v2M9 13v2'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 8V4H8'/%3E%3Crect width='16' height='12' x='4' y='8' rx='2'/%3E%3Cpath d='M2 14h2M20 14h2M15 13v2M9 13v2'/%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -448,21 +509,64 @@ details.fontes summary:hover { color: var(--destaque); }
 
 /* Compositor (campo de mensagem) */
 .compositor {
-  display: flex; gap: 10px;
   padding: 14px max(24px, calc((100% - var(--largura-chat)) / 2)) 22px;
   background: linear-gradient(to bottom, transparent, var(--fundo) 30%);
 }
-.compositor input {
-  flex: 1; min-height: 50px; padding: 0 18px; border-radius: 14px; font-size: .95rem;
-  box-shadow: var(--sombra-2);
+.compositor-caixa {
+  position: relative; overflow: visible; padding: 12px;
+  border: 1px solid var(--borda-forte); border-radius: 18px;
+  background: var(--painel); box-shadow: var(--sombra-2);
+  transition: border-color .18s, box-shadow .18s;
 }
-.compositor button {
-  display: inline-flex; align-items: center; gap: 8px; min-height: 50px; padding: 0 20px;
-  border: none; border-radius: 14px; background: var(--destaque); color: var(--destaque-texto);
-  font-weight: 600; box-shadow: var(--sombra-2); transition: background .15s;
+.compositor-caixa:focus-within { border-color: var(--destaque); box-shadow: var(--anel), var(--sombra-2); }
+.compositor-editor { position: relative; }
+.compositor textarea {
+  display: block; width: 100%; min-height: 28px; max-height: 180px; padding: 3px 4px;
+  border: 0; border-radius: 8px; outline: none; resize: none; overflow-y: auto;
+  background: transparent; color: var(--texto); box-shadow: none; font-size: .95rem; line-height: 1.55;
 }
-.compositor button:hover:not(:disabled) { background: var(--destaque-forte); }
-.compositor button:disabled { opacity: .45; cursor: not-allowed; }
+.compositor textarea:focus-visible { outline: none; border-color: transparent; box-shadow: none; }
+.compositor-rodape, .compositor-esquerda { display: flex; align-items: center; }
+.compositor-rodape { justify-content: space-between; gap: 12px; margin-top: 8px; }
+.compositor-esquerda { gap: 10px; min-width: 0; }
+.compositor-dica { color: var(--suave); font-size: .72rem; }
+.botao-anexo {
+  display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
+  border: 1px solid var(--borda); border-radius: 11px; background: var(--painel-2); color: var(--texto-2);
+}
+.botao-anexo:hover:not(:disabled) { border-color: var(--destaque); color: var(--destaque); }
+.anexos-chat { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 10px; }
+.anexo-chat {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 5px 8px 5px 10px;
+  border: 1px solid var(--borda); border-radius: 10px; background: var(--painel-2); font-size: .76rem;
+}
+.anexo-chat-nome { overflow: hidden; max-width: 240px; text-overflow: ellipsis; white-space: nowrap; }
+.anexo-chat-remover { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--suave); }
+.anexo-chat-remover:hover { background: var(--errado); color: var(--perigo); }
+.botao-enviar-chat {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 15px;
+  border: 1px solid transparent; border-radius: 12px; background: var(--destaque); color: var(--destaque-texto);
+  font-size: .86rem; font-weight: 600; transition: background .15s, transform .1s;
+}
+.botao-enviar-chat:hover:not(:disabled) { background: var(--destaque-forte); }
+.botao-enviar-chat:disabled { opacity: .5; cursor: not-allowed; }
+.botao-enviar-chat.parar { background: var(--texto); color: var(--painel); }
+.botao-enviar-chat.parar:hover { background: var(--texto-2); }
+.menu-comandos {
+  position: absolute; z-index: 20; bottom: calc(100% + 10px); left: 0; width: min(340px, 100%);
+  padding: 6px; border: 1px solid var(--borda); border-radius: 14px; background: var(--painel); box-shadow: var(--sombra-3);
+}
+.comando-opcao {
+  display: flex; flex-direction: column; width: 100%; padding: 9px 10px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--texto); text-align: left;
+}
+.comando-opcao:hover, .comando-opcao[aria-selected="true"] { background: var(--painel-2); }
+button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-direction: column; align-items: flex-start; width: 100%; }
+.comando-opcao strong { color: var(--destaque); font-size: .8rem; }
+.comando-opcao small { color: var(--suave); font-size: .72rem; }
+.compositor-estado { min-height: 0; margin: 4px 0 0; color: var(--suave); font-size: .74rem; }
+.compositor-estado:empty { display: none; }
+.arquivos-enviados { margin-top: 7px; padding-top: 7px; border-top: 1px solid currentColor; font-size: .78rem; opacity: .9; }
 
 /* Resumo, flashcards e simulado (respostas "ricas" no chat e na tela de simulados) */
 .rica { white-space: normal; }
@@ -717,14 +821,23 @@ details.fontes summary:hover { color: var(--destaque); }
 
 /* Chat da turma */
 .vazio-turma { align-self: stretch; }
+.selo-demonstracao { align-self: center; padding: 3px 8px; border-radius: 999px; color: var(--texto-2); background: var(--painel); font-size: .7rem; }
+.selo-exemplo { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 999px; color: var(--texto-2); background: var(--painel); font-size: .62rem; font-weight: 600; }
 .msg-turma {
-  align-self: flex-start; max-width: min(560px, 80%); padding: 9px 14px;
+  position: relative; align-self: flex-start; max-width: min(560px, calc(80% - 40px)); margin-left: 40px; padding: 9px 14px;
   background: var(--painel); border: 1px solid var(--borda); border-radius: 4px 18px 18px 18px; box-shadow: var(--sombra-1);
 }
+.msg-turma::before {
+  content: attr(data-avatar); position: absolute; top: 0; left: -40px;
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--avatar-cor, var(--gradiente)); color: #fff; font-size: .66rem; font-weight: 700;
+  box-shadow: var(--sombra-1);
+}
 .msg-turma.minha {
-  align-self: flex-end; background: var(--destaque); border-color: var(--destaque);
+  align-self: flex-end; margin-left: 0; margin-right: 40px; background: var(--destaque); border-color: var(--destaque);
   color: var(--destaque-texto); border-radius: 18px 18px 4px 18px;
 }
+.msg-turma.minha::before { left: auto; right: -40px; }
 .msg-turma .autor { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; font-size: .78rem; font-weight: 700; color: var(--destaque); }
 .msg-turma .autor .selo { font-size: .62rem; }
 .msg-turma .texto { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
@@ -769,9 +882,12 @@ details.fontes summary:hover { color: var(--destaque); }
   .tela.chat { min-height: calc(100vh - 57px); }
   #mensagens, #mensagens-turma { padding: 18px 16px; }
   .compositor { padding: 12px 16px 16px; }
-  .compositor button span { display: none; }
-  .compositor button { padding: 0 16px; }
-  .mensagem.usuario, .msg-turma { max-width: 90%; }
+  #enviar-pergunta .label-enviar { display: none; }
+  .botao-enviar-chat { width: 42px; padding: 0; }
+  .anexo-chat-nome { max-width: 160px; }
+  .compositor-dica { font-size: .65rem; }
+  .mensagem.usuario { max-width: calc(90% - 44px); }
+  .msg-turma { max-width: calc(90% - 40px); }
 
   .linha-campos { grid-template-columns: 1fr; }
   .resumo-geral { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }

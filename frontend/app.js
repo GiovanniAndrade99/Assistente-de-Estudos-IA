@@ -5,9 +5,25 @@ const mensagens = $("mensagens");
 const formPergunta = $("form-pergunta");
 const inputPergunta = $("input-pergunta");
 const inputPdf = $("input-pdf");
+const inputAnexos = $("input-anexos");
+const botaoAnexar = $("anexar-pdf");
+const caixaAnexos = $("anexos-chat");
+const menuComandos = $("menu-comandos");
+const estadoCompositor = $("compositor-estado");
+const botaoEnviarPergunta = $("enviar-pergunta");
 const statusUpload = $("status-upload");
 const listaDocumentos = $("lista-documentos");
 const selectDisciplina = $("select-disciplina");
+let arquivosAnexados = [];
+let indiceComandoAtivo = 0;
+let controladorChat = null;
+
+const COMANDOS_CHAT = [
+  { comando: "/explicar", resumo: "Explicar um conceito", modelo: "Explique de forma simples e com um exemplo: " },
+  { comando: "/resumir", resumo: "Resumir um assunto", modelo: "Faça um resumo dos principais pontos sobre: " },
+  { comando: "/questoes", resumo: "Criar perguntas de revisão", modelo: "Crie 5 perguntas de revisão sobre: " },
+  { comando: "/flashcards", resumo: "Criar flashcards de estudo", modelo: "Crie flashcards de pergunta e resposta sobre: " },
+];
 
 let usuario = null;      // {id, nome, email, tipo}
 let disciplinas = [];    // [{id, nome, criado_por, ...}]
@@ -26,7 +42,14 @@ async function chamarApi(url, opcoes = {}) {
     location.href = "/login.html";
     throw new Error("Faça login para continuar.");
   }
-  const dados = await resposta.json();
+  const texto = await resposta.text();
+  let dados = {};
+  try {
+    dados = texto ? JSON.parse(texto) : {};
+  } catch {
+    const trecho = texto.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(`Resposta inválida do servidor (HTTP ${resposta.status}). ${trecho || "Confira se o backend está em execução."}`);
+  }
   if (!resposta.ok) throw new Error(dados.detail || "Erro no servidor");
   return dados;
 }
@@ -55,10 +78,27 @@ function formatarData(texto) {
 function adicionarMensagem(tipo, html) {
   const div = document.createElement("div");
   div.className = `mensagem ${tipo}`;
+  if (tipo.split(" ").includes("usuario")) {
+    div.dataset.avatar = iniciaisDoNome(usuario?.nome || "Você");
+    div.style.setProperty("--avatar-cor", corDoAvatarNome(usuario?.nome || "Você"));
+    div.setAttribute("role", "group");
+    div.setAttribute("aria-label", `Mensagem de ${usuario?.nome || "Você"}`);
+  }
   div.innerHTML = html;
   mensagens.appendChild(div);
   mensagens.scrollTop = mensagens.scrollHeight;
   return div;
+}
+
+function iniciaisDoNome(nome) {
+  return String(nome || "?").trim().split(/\s+/).filter(Boolean).slice(0, 2)
+    .map((parte) => [...parte][0].toLocaleUpperCase("pt-BR")).join("") || "?";
+}
+
+function corDoAvatarNome(nome) {
+  let hash = 0;
+  for (const caractere of String(nome || "")) hash = (hash * 31 + caractere.codePointAt(0)) | 0;
+  return `hsl(${Math.abs(hash) % 360} 62% 46%)`;
 }
 
 function rodapeModelo(modelo) {
@@ -155,7 +195,7 @@ async function iniciar() {
   usuario = await chamarApi("/api/auth/eu");
   mostrarUsuario();
   $("tipo-usuario").classList.add(usuario.tipo);
-  for (const el of document.querySelectorAll("[data-so-professor]")) el.hidden = usuario.tipo !== "professor";
+  for (const el of document.querySelectorAll("[data-so-professor]")) el.hidden = usuario.tipo !== "professor" && !usuario.administrador;
   for (const tela of document.querySelectorAll(".tela")) {
     const area = tela.querySelector(".precisa-disciplina");
     if (area) area.insertAdjacentHTML("beforebegin",
@@ -173,7 +213,7 @@ function mostrarUsuario() {
   // Iniciais do primeiro e do último nome: "Giovanni Andrade" → "GA"
   const partes = usuario.nome.trim().split(/\s+/);
   $("avatar-usuario").textContent = (partes[0][0] + (partes.length > 1 ? partes.at(-1)[0] : "")).toUpperCase();
-  $("tipo-usuario").textContent = usuario.tipo === "professor" ? "👩‍🏫 Professor" : "🎓 Aluno";
+  $("tipo-usuario").textContent = usuario.administrador ? "🛡️ Administrador" : usuario.tipo === "professor" ? "👩‍🏫 Professor" : "🎓 Aluno";
 }
 
 $("botao-sair").onclick = async () => {
@@ -200,7 +240,8 @@ function selecionarDisciplina(disciplina) {
   const temDisciplina = Boolean(disciplina);
   $("botao-remover-disciplina").hidden = !temDisciplina || disciplina.criado_por !== usuario.id;
   inputPergunta.disabled = !temDisciplina;
-  formPergunta.querySelector("button").disabled = !temDisciplina;
+  botaoEnviarPergunta.disabled = !temDisciplina;
+  botaoAnexar.disabled = !temDisciplina;
   atualizarAreasDaDisciplina();
 
   $("assistente-subtitulo").textContent = temDisciplina
@@ -443,29 +484,167 @@ function formatarResposta(texto, fontes) {
   return html;
 }
 
+function redimensionarCompositor() {
+  inputPergunta.style.height = "auto";
+  inputPergunta.style.height = `${Math.min(inputPergunta.scrollHeight, 180)}px`;
+}
+
+function comandosCorrespondentes() {
+  const inicio = inputPergunta.value.match(/^\s*\/[^\s]*/)?.[0];
+  if (inicio === undefined) return [];
+  const filtro = inicio.trim().toLowerCase();
+  return COMANDOS_CHAT.filter((item) => item.comando.startsWith(filtro));
+}
+
+function desenharMenuComandos() {
+  const resultados = comandosCorrespondentes();
+  menuComandos.hidden = !resultados.length;
+  if (!resultados.length) return;
+  indiceComandoAtivo = Math.min(indiceComandoAtivo, resultados.length - 1);
+  menuComandos.innerHTML = resultados.map((item, i) => `
+    <button type="button" class="comando-opcao" role="option" aria-selected="${i === indiceComandoAtivo}" data-comando="${item.comando}">
+      <strong>${item.comando}</strong><small>${item.resumo}</small>
+    </button>`).join("");
+  for (const opcao of menuComandos.querySelectorAll(".comando-opcao")) {
+    opcao.onpointerdown = (e) => e.preventDefault();
+    opcao.onclick = () => aplicarComando(opcao.dataset.comando);
+  }
+}
+
+function aplicarComando(comando) {
+  const item = COMANDOS_CHAT.find((c) => c.comando === comando);
+  if (!item) return;
+  inputPergunta.value = inputPergunta.value.replace(/^\s*\/[^\s]*/, item.modelo);
+  menuComandos.hidden = true;
+  redimensionarCompositor();
+  inputPergunta.focus();
+  inputPergunta.setSelectionRange(inputPergunta.value.length, inputPergunta.value.length);
+}
+
+inputPergunta.addEventListener("input", () => {
+  indiceComandoAtivo = 0;
+  redimensionarCompositor();
+  desenharMenuComandos();
+});
+inputPergunta.addEventListener("keydown", (evento) => {
+  if (!menuComandos.hidden) {
+    const opcoes = [...menuComandos.querySelectorAll(".comando-opcao")];
+    if (evento.key === "ArrowDown" || evento.key === "ArrowUp") {
+      evento.preventDefault();
+      indiceComandoAtivo = (indiceComandoAtivo + (evento.key === "ArrowDown" ? 1 : -1) + opcoes.length) % opcoes.length;
+      desenharMenuComandos();
+      return;
+    }
+    if (evento.key === "Escape") { menuComandos.hidden = true; return; }
+    if (evento.key === "Enter" && !evento.shiftKey) {
+      evento.preventDefault();
+      aplicarComando(opcoes[indiceComandoAtivo].dataset.comando);
+      return;
+    }
+  }
+  if (evento.key === "Enter" && !evento.shiftKey) {
+    evento.preventDefault();
+    formPergunta.requestSubmit();
+  }
+});
+
+botaoAnexar.onclick = () => { if (disciplinaAtual && !controladorChat) inputAnexos.click(); };
+inputAnexos.addEventListener("change", () => {
+  const porChave = new Map(arquivosAnexados.map((a) => [`${a.name}:${a.size}:${a.lastModified}`, a]));
+  for (const arquivo of inputAnexos.files) {
+    if (arquivo.type !== "application/pdf" && !arquivo.name.toLowerCase().endsWith(".pdf")) {
+      estadoCompositor.textContent = `${arquivo.name}: somente arquivos PDF podem ser anexados.`;
+      continue;
+    }
+    porChave.set(`${arquivo.name}:${arquivo.size}:${arquivo.lastModified}`, arquivo);
+  }
+  arquivosAnexados = [...porChave.values()];
+  inputAnexos.value = "";
+  desenharAnexos();
+});
+
+function desenharAnexos() {
+  caixaAnexos.hidden = !arquivosAnexados.length;
+  caixaAnexos.innerHTML = arquivosAnexados.map((arquivo, i) => `
+    <span class="anexo-chat" title="${escaparHtml(arquivo.name)}">
+      <svg aria-hidden="true"><use href="#i-clipe"/></svg>
+      <span class="anexo-chat-nome">${escaparHtml(arquivo.name)}</span>
+      <button type="button" class="anexo-chat-remover" data-indice="${i}" aria-label="Remover ${escaparHtml(arquivo.name)}">×</button>
+    </span>`).join("");
+  for (const remover of caixaAnexos.querySelectorAll(".anexo-chat-remover")) {
+    remover.onclick = () => {
+      arquivosAnexados.splice(Number(remover.dataset.indice), 1);
+      desenharAnexos();
+    };
+  }
+}
+
+function estadoEnvio(ativo) {
+  botaoEnviarPergunta.querySelector(".icone-enviar").hidden = ativo;
+  botaoEnviarPergunta.querySelector(".icone-parar").hidden = !ativo;
+  botaoEnviarPergunta.querySelector(".label-enviar").textContent = ativo ? "Parar" : "Enviar";
+  botaoEnviarPergunta.setAttribute("aria-label", ativo ? "Parar resposta" : "Enviar pergunta");
+  botaoEnviarPergunta.classList.toggle("parar", ativo);
+  botaoAnexar.disabled = ativo || !disciplinaAtual;
+}
+
 formPergunta.addEventListener("submit", async (evento) => {
   evento.preventDefault();
-  const pergunta = inputPergunta.value.trim();
-  if (!pergunta || !disciplinaAtual) return;
+  if (controladorChat) { controladorChat.abort(); return; }
+  const perguntaDigitada = inputPergunta.value.trim();
+  const anexos = [...arquivosAnexados];
+  if ((!perguntaDigitada && !anexos.length) || !disciplinaAtual) return;
 
-  adicionarMensagem("usuario", escaparHtml(pergunta));
+  const pergunta = perguntaDigitada || "Analise os PDFs anexados e explique os principais conceitos.";
+  const conteudoUsuario = [
+    perguntaDigitada ? escaparHtml(perguntaDigitada) : "Analise os PDFs anexados e explique os principais conceitos.",
+    anexos.length ? `<div class="arquivos-enviados">${anexos.map((a) => `📎 ${escaparHtml(a.name)}`).join("<br>")}</div>` : "",
+  ].filter(Boolean).join("");
+  adicionarMensagem("usuario", conteudoUsuario);
   inputPergunta.value = "";
-  const botao = formPergunta.querySelector("button");
-  botao.disabled = true;
-  const carregando = adicionarMensagem("bot carregando", "Pensando...");
+  arquivosAnexados = [];
+  desenharAnexos();
+  menuComandos.hidden = true;
+  redimensionarCompositor();
+
+  const controle = new AbortController();
+  controladorChat = controle;
+  estadoEnvio(true);
+  estadoCompositor.textContent = anexos.length ? "Enviando PDFs para os materiais da disciplina…" : "";
+  const carregando = adicionarMensagem("bot carregando", anexos.length ? "Preparando os PDFs..." : "Pensando...");
 
   try {
-    const r = await postarJson(rotaDisciplina("/chat"), { pergunta });
+    for (const arquivo of anexos) {
+      const dados = new FormData();
+      dados.append("arquivo", arquivo);
+      await chamarApi(rotaDisciplina("/documentos"), { method: "POST", body: dados, signal: controle.signal });
+    }
+    if (anexos.length) await carregarDocumentos();
+    estadoCompositor.textContent = "";
+    const r = await chamarApi(rotaDisciplina("/chat"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pergunta }),
+      signal: controle.signal,
+    });
     carregando.className = "mensagem bot";
     carregando.innerHTML = formatarResposta(r.resposta, r.fontes) + rodapeModelo(r.modelo);
   } catch (erro) {
     carregando.className = "mensagem bot";
-    carregando.textContent = `Erro: ${erro.message}`;
+    carregando.textContent = erro.name === "AbortError" ? "Solicitação interrompida." : `Erro: ${erro.message}`;
+    if (erro.name !== "AbortError") estadoCompositor.textContent = erro.message;
   } finally {
-    botao.disabled = false;
+    if (controladorChat === controle) controladorChat = null;
+    estadoEnvio(false);
     inputPergunta.focus();
     mensagens.scrollTop = mensagens.scrollHeight;
   }
+});
+
+botaoEnviarPergunta.addEventListener("click", (evento) => {
+  if (!controladorChat) return;
+  evento.preventDefault();
+  controladorChat.abort();
 });
 
 // ---------------------------------------------------------- painel do professor

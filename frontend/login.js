@@ -139,8 +139,23 @@ async function enviar(form, url) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(Object.fromEntries(new FormData(form))),
     });
-    const dados = await resposta.json();
-    if (!resposta.ok) throw new Error(dados.detail || "Erro no servidor");
+    // Leia como texto primeiro: se o servidor retornar HTML (por exemplo,
+    // quando o frontend foi aberto sem o FastAPI) o erro de JSON original
+    // era pouco informativo e escondia a resposta recebida.
+    const texto = await resposta.text();
+    let dados = {};
+    try {
+      dados = texto ? JSON.parse(texto) : {};
+    } catch {
+      const trecho = texto.replace(/\s+/g, " ").slice(0, 180);
+      throw new Error(`Resposta inválida do servidor (HTTP ${resposta.status}). ${trecho || "Confira se o backend está em execução."}`);
+    }
+    if (!resposta.ok) {
+      const detalhe = Array.isArray(dados.detail)
+        ? dados.detail.map((item) => item.msg).filter(Boolean).join(" ")
+        : dados.detail || dados.message || dados.error;
+      throw new Error(detalhe || `Falha no servidor (HTTP ${resposta.status} em ${resposta.url}): ${JSON.stringify(dados)}`);
+    }
     location.href = "/";
   } catch (e) {
     form.querySelector(".erro-geral").textContent = e.message;

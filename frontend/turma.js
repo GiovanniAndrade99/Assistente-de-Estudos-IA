@@ -53,8 +53,12 @@ function elementoMensagem(m) {
   const minha = m.usuario_id === usuario.id;
   const div = document.createElement("div");
   div.className = `msg-turma ${minha ? "minha" : ""}`;
+  div.dataset.avatar = iniciaisDoNome(m.autor);
+  div.style.setProperty("--avatar-cor", corDoAvatarNome(m.autor));
+  div.setAttribute("role", "group");
+  div.setAttribute("aria-label", `Mensagem de ${m.autor}`);
   div.innerHTML = `
-    ${minha ? "" : `<div class="autor">${escaparHtml(m.autor)}${m.tipo === "professor" ? ` <span class="selo professor">Professor</span>` : ""}</div>`}
+    ${minha ? "" : `<div class="autor">${escaparHtml(m.autor)}${m.tipo === "professor" ? ` <span class="selo professor">Professor</span>` : ""}${m.demonstracao ? ` <span class="selo-exemplo">Exemplo</span>` : ""}</div>`}
     <div class="texto">${escaparHtml(m.texto)}</div>
     <div class="hora">${formatarData(m.criado_em)}</div>`;
   return div;
