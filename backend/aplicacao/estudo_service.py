@@ -8,11 +8,15 @@ Flashcards e simulado usam "saída estruturada": passamos um schema (classes
 Pydantic abaixo) e o Gemini é obrigado a responder num JSON nesse formato,
 que o frontend consegue montar direto na tela.
 """
+from fastapi import HTTPException
 from pydantic import BaseModel
 from google.genai import types
 
-from . import prompts
-from .rag import caminho_do_pdf, extrair_paginas, gerar_conteudo
+from .. import prompts
+from ..infraestrutura import db
+from ..infraestrutura.rag import caminho_do_pdf, extrair_paginas, gerar_conteudo
+from .disciplinas_service import disciplina_ou_404
+from .documentos_service import nome_seguro
 
 # Limite de caracteres enviados ao modelo (~50 mil tokens), para não estourar a
 # cota por minuto do nível gratuito em apostilas muito grandes.
@@ -85,3 +89,24 @@ def gerar_simulado(disciplina_id: int, arquivo: str, quantidade: int = 5) -> dic
         if len(q.alternativas) == 4 and 0 <= q.correta < 4
     ]
     return {"arquivo": arquivo, "questoes": questoes, "aviso": _aviso(cortado), "modelo": modelo}
+
+
+# ---------------------------------------------------------------- resultados do simulado
+
+def salvar_resultado_simulado(disciplina_id: int, usuario_id: int, arquivo: str, acertos: int, total: int) -> None:
+    disciplina_ou_404(disciplina_id)
+    if acertos > total:
+        raise HTTPException(400, "Acertos maior que o total.")
+    db.executar(
+        """INSERT INTO resultados_simulado (usuario_id, disciplina_id, arquivo, acertos, total)
+           VALUES (?, ?, ?, ?, ?)""",
+        (usuario_id, disciplina_id, nome_seguro(arquivo), acertos, total),
+    )
+
+
+def meus_resultados_simulado(disciplina_id: int, usuario_id: int) -> list[dict]:
+    return db.consultar(
+        """SELECT arquivo, acertos, total, criado_em FROM resultados_simulado
+           WHERE disciplina_id = ? AND usuario_id = ? ORDER BY criado_em DESC LIMIT 50""",
+        (disciplina_id, usuario_id),
+    )

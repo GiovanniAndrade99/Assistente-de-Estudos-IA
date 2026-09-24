@@ -7,6 +7,7 @@ Consulta (pergunta do aluno):
     pergunta -> embedding -> busca dos trechos mais parecidos (cosseno)
     -> prompt (trechos + pergunta) -> Gemini -> resposta com citações
 """
+import logging
 from pathlib import Path
 
 import httpx
@@ -15,9 +16,11 @@ from google import genai
 from google.genai import types
 from google.genai.errors import APIError
 
-from . import config
-from .prompts import SISTEMA_CHAT, montar_prompt_chat
+from .. import config
+from ..prompts import SISTEMA_CHAT, montar_prompt_chat
 from .vetores import BancoVetorial
+
+logger = logging.getLogger("rag")
 
 _banco = BancoVetorial(config.PASTA_INDICE)
 _cliente_gemini = None
@@ -63,7 +66,10 @@ def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
             ultimo_erro = erro
         except httpx.TimeoutException as erro:
             ultimo_erro = erro
-        print(f"[gemini] {modelo} falhou ({ultimo_erro}); tentando o próximo modelo")
+        logger.warning(
+            "modelo_gemini_falhou",
+            extra={"modelo": modelo, "erro": str(ultimo_erro)},
+        )
     if isinstance(ultimo_erro, APIError):
         raise ultimo_erro
     raise RuntimeError("O Gemini demorou demais para responder. Tente novamente em instantes.")

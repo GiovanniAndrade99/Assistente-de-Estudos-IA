@@ -7,7 +7,7 @@ só os dados "de sistema".
 import sqlite3
 from contextlib import contextmanager
 
-from . import config
+from .. import config
 
 ARQUIVO_DB = config.PASTA_DADOS / "app.db"
 
@@ -123,12 +123,21 @@ CREATE TABLE IF NOT EXISTS mensagens_turma (
     texto         TEXT NOT NULL,
     criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Tentativas de login/cadastro com falha, por e-mail (rate limit contra força bruta).
+-- Tabela nova: não precisa de ALTER TABLE em bancos já existentes.
+CREATE TABLE IF NOT EXISTS tentativas_login (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    email       TEXT NOT NULL,
+    criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as
 # acrescenta em tabelas antigas, então criar_tabelas() adiciona com ALTER TABLE.
 MIGRACOES = [
     ("eventos", "hora", "TEXT"),
+    ("sessoes", "expires_at", "TEXT"),
 ]
 
 

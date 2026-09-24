@@ -25,8 +25,8 @@ from datetime import date, timedelta
 
 import pymupdf
 
-from backend import db, rag
-from backend.auth import gerar_hash
+from backend.core.seguranca import gerar_hash_senha
+from backend.infraestrutura import db, rag
 
 from .dados_curso_cc import DISCIPLINAS
 
@@ -59,7 +59,7 @@ def obter_professor(email: str, senha: str) -> int:
     print(f"Criando a conta de professor {email} (senha: {senha})")
     return db.executar(
         "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, 'professor')",
-        ("Coordenação de Ciência da Computação", email, gerar_hash(senha)),
+        ("Coordenação de Ciência da Computação", email, gerar_hash_senha(senha)),
     )
 
 

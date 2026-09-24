@@ -18,20 +18,43 @@ generativa (Gemini):
 
 ## Arquitetura
 
+O backend segue uma Clean Architecture "leve", em camadas (cada uma só conhece a de baixo):
+
 ```
 [Navegador: HTML/CSS/JS]  login.html → index.html
-        │  fetch() JSON + cookie de sessão
+        │  fetch() JSON + cookie de sessão HttpOnly
         ▼
-[Backend: Python + FastAPI]
-   ├─ /api/auth/...                      → cadastro, login, logout, usuário atual
-   ├─ /api/disciplinas                   → listar / criar / remover disciplinas
-   ├─ /api/disciplinas/{id}/documentos   → upload: PDF → trechos → embeddings → banco vetorial
-   ├─ /api/disciplinas/{id}/chat         → pergunta → busca → prompt → Gemini → resposta com citações
-   ├─ /api/disciplinas/{id}/resumo       → documento inteiro → Gemini → resumo
-   ├─ /api/disciplinas/{id}/flashcards   → documento inteiro → Gemini (JSON) → cartões
-   ├─ /api/disciplinas/{id}/simulado     → documento inteiro → Gemini (JSON) → questões
+[api/]            rotas FastAPI: leem a requisição, chamam a camada de aplicação, devolvem JSON
+        │
+        ▼
+[aplicacao/]       regra de negócio (auth, disciplinas, documentos, chat, estudo, turma, professor, progresso)
+        │
+        ▼
+[infraestrutura/]  acesso a dados: SQLite (db.py), banco vetorial (vetores.py), Gemini (rag.py)
+        │
+        ▼
+[core/]            funções puras sem dependência de framework (hash de senha/token)
+```
+
+Toda requisição passa antes por uma middleware (`middlewares/observabilidade.py`) que gera um
+**Request ID** único (ou aproveita o `X-Request-ID` enviado pelo cliente), devolve esse id no
+cabeçalho da resposta e em qualquer corpo de erro (`{"detail": ..., "request_id": ...}`), e grava
+uma linha de **log estruturado em JSON** (`infraestrutura/logging_setup.py`) com método, rota,
+status, duração e esse mesmo id — assim dá para achar, a partir de um erro relatado pelo usuário,
+exatamente as linhas de log daquela chamada.
+
+Rotas da API:
+```
+   ├─ /api/health                         → healthcheck (usado por monitoramento)
+   ├─ /api/auth/...                       → cadastro, login, logout, usuário atual
+   ├─ /api/disciplinas                    → listar / criar / remover disciplinas
+   ├─ /api/disciplinas/{id}/documentos    → upload: PDF → trechos → embeddings → banco vetorial
+   ├─ /api/disciplinas/{id}/chat          → pergunta → busca → prompt → Gemini → resposta com citações
+   ├─ /api/disciplinas/{id}/resumo        → documento inteiro → Gemini → resumo
+   ├─ /api/disciplinas/{id}/flashcards    → documento inteiro → Gemini (JSON) → cartões
+   ├─ /api/disciplinas/{id}/simulado      → documento inteiro → Gemini (JSON) → questões
    ├─ /api/disciplinas/{id}/{eventos|atividades|videos|mensagens} → recursos da turma
-   └─ /api/professor/{notas|perguntas}   → painel da turma (só professores)
+   └─ /api/professor/{notas|perguntas}    → painel da turma (só professores)
         │
         ├──► SQLite (data/app.db): usuários, sessões, disciplinas, documentos, histórico
         ├──► Banco vetorial próprio (NumPy, data/indice): trechos + embeddings
@@ -43,15 +66,27 @@ generativa (Gemini):
 ```
 assistente-estudos/
 ├── backend/
-│   ├── main.py      # rotas da API (FastAPI) e servidor do frontend
-│   ├── auth.py      # cadastro, login, sessões e hash de senhas (PBKDF2)
-│   ├── db.py        # banco SQLite: tabelas e funções de consulta
-│   ├── rag.py       # pipeline RAG: extração, trechos, embeddings, busca, resposta
-│   ├── estudo.py    # resumo, flashcards e simulado
-│   ├── turma.py     # calendário, atividades, videoaulas e chat da turma
-│   ├── vetores.py   # banco vetorial com NumPy (similaridade de cosseno)
-│   ├── prompts.py   # todos os prompts do projeto
-│   └── config.py    # chaves, modelos e parâmetros (tamanho do trecho, top-k...)
+│   ├── main.py                 # app factory: logging, middlewares, routers, exception handlers
+│   ├── excecoes.py             # exception handlers (sempre com request_id no corpo)
+│   ├── config.py               # chaves, modelos, parâmetros e variáveis de ambiente
+│   ├── prompts.py              # todos os prompts do projeto
+│   ├── core/
+│   │   └── seguranca.py        # hash de senha (PBKDF2) e de token de sessão — sem dependências
+│   ├── infraestrutura/
+│   │   ├── db.py                # banco SQLite: tabelas e funções de consulta
+│   │   ├── rag.py                # pipeline RAG: extração, trechos, embeddings, busca, resposta
+│   │   ├── vetores.py            # banco vetorial com NumPy (similaridade de cosseno)
+│   │   └── logging_setup.py     # logging estruturado em JSON
+│   ├── aplicacao/               # regra de negócio, um módulo por área
+│   │   ├── auth_service.py, disciplinas_service.py, documentos_service.py,
+│   │   │   chat_service.py, estudo_service.py, turma_service.py,
+│   │   │   professor_service.py, progresso_service.py
+│   ├── api/                     # rotas FastAPI (finas) + dependências de autenticação
+│   │   ├── dependencias.py, auth_router.py, disciplinas_router.py, documentos_router.py,
+│   │   │   chat_router.py, estudo_router.py, turma_router.py, professor_router.py,
+│   │   │   progresso_router.py, saude_router.py
+│   └── middlewares/
+│       └── observabilidade.py   # request ID, log de acesso e cabeçalhos de segurança
 ├── frontend/
 │   ├── login.html / login.js   # tela de entrar / criar conta
 │   ├── index.html / app.js     # app principal: menu, assistente IA e painel do professor
@@ -76,10 +111,23 @@ assistente-estudos/
 | Remover disciplina | só quem criou | só quem criou |
 | Painel da turma (notas e perguntas dos alunos) | ❌ | ✅ |
 
-Segurança: senhas guardadas só como hash PBKDF2-SHA256 com sal (200 mil iterações) e sessão
-em cookie HttpOnly. *Limitação conhecida:* a nota do simulado é calculada no navegador, então um
-aluno com conhecimento técnico poderia enviar uma nota falsa. Em produção, a correção deveria
-ser feita no servidor.
+Segurança:
+- Senhas: hash PBKDF2-SHA256 com sal (200 mil iterações).
+- Sessão: cookie HttpOnly + SameSite=Lax, `secure` quando `APP_ENV=production`; no banco fica só
+  o hash SHA-256 do token (nunca o valor bruto) e cada sessão expira (`DURACAO_SESSAO_SEGUNDOS`,
+  padrão 7 dias).
+- Login/cadastro: bloqueio temporário (429) após várias tentativas com senha errada seguidas
+  (`LIMITE_TENTATIVAS_LOGIN`/`JANELA_TENTATIVAS_LOGIN_MINUTOS` em `config.py`).
+- Upload de PDF: limitado a `TAMANHO_MAX_UPLOAD_MB` (padrão 20MB); nome de arquivo sempre
+  saneado (`Path(...).name`), sem permitir caminhos como `../../`.
+- Cabeçalhos de resposta: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` sempre;
+  `Strict-Transport-Security` quando `APP_ENV=production`.
+- Toda resposta de erro traz um `request_id` correlacionável com os logs do servidor (ver
+  "Arquitetura"), sem vazar detalhes internos em erros inesperados.
+
+*Limitação conhecida:* a nota do simulado é calculada no navegador, então um aluno com
+conhecimento técnico poderia enviar uma nota falsa. Em produção, a correção deveria ser feita
+no servidor.
 
 ## Como rodar
 
