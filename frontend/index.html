@@ -36,6 +36,8 @@
       <symbol id="i-grade" viewBox="0 0 24 24"><rect width="7" height="7" x="3" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="3" rx="1.5"/><rect width="7" height="7" x="14" y="14" rx="1.5"/><rect width="7" height="7" x="3" y="14" rx="1.5"/></symbol>
       <symbol id="i-busca" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
       <symbol id="i-seta-dir" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+      <symbol id="i-ajuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></symbol>
+      <symbol id="i-brilho" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></symbol>
     </defs>
   </svg>
 
@@ -78,6 +80,9 @@
           <button type="button" data-tela="calendario"><svg><use href="#i-calendario"/></svg><span>Calendário</span></button>
           <button type="button" data-tela="turma"><svg><use href="#i-conversa"/></svg><span>Chat da turma</span></button>
           <button type="button" data-tela="painel" data-so-professor hidden><svg><use href="#i-grafico"/></svg><span>Painel da turma</span></button>
+          <h2>Ajuda</h2>
+          <button type="button" data-tela="sobre-ia"><svg><use href="#i-brilho"/></svg><span>Sobre o assistente IA</span></button>
+          <button type="button" data-tela="suporte"><svg><use href="#i-ajuda"/></svg><span>Suporte</span></button>
         </nav>
 
         <section id="secao-materiais" class="grupo-lateral" hidden>
@@ -143,6 +148,8 @@
         <div>
           <h2>Assistente IA</h2>
           <p id="assistente-subtitulo">Respostas baseadas nos PDFs da disciplina, com as fontes citadas.</p>
+          <p class="aviso-ia">Conteúdo gerado por IA pode conter erros.
+            <button type="button" class="link-ia" data-tela="sobre-ia">Saiba como o assistente funciona</button></p>
         </div>
       </header>
       <div id="mensagens"></div>
@@ -329,6 +336,128 @@
       </div>
     </main>
 
+    <main class="tela pagina" id="tela-sobre-ia" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-brilho"/></svg></span>
+        <div>
+          <h2>Sobre o assistente IA</h2>
+          <p>O que é o assistente, onde a inteligência artificial é usada no sistema e como usá-la bem.</p>
+        </div>
+      </header>
+
+      <section class="identificacao-ia glare">
+        <span class="selo-ia"><svg><use href="#i-robo"/></svg> Você está usando uma inteligência artificial</span>
+        <p>O <strong>Assistente IA</strong> não é uma pessoa nem um professor. É um programa que usa um
+          <strong>modelo de linguagem generativo</strong> para escrever respostas a partir dos PDFs da disciplina.
+          Ele pode errar: confira sempre as fontes citadas e, em caso de dúvida, fale com o professor.</p>
+        <dl class="ficha-ia" id="ficha-ia"><div><dt>Modelo</dt><dd>Carregando...</dd></div></dl>
+      </section>
+
+      <h3 class="titulo-secao">Como uma resposta é gerada</h3>
+      <ol class="passos-ia">
+        <li class="glare"><strong>Indexação</strong><span>Cada PDF enviado é dividido em trechos, e cada trecho vira um vetor numérico (embedding).</span></li>
+        <li class="glare"><strong>Busca</strong><span>Sua pergunta também vira um vetor, e o sistema encontra os <b data-ia="top_k">5</b> trechos mais parecidos do material.</span></li>
+        <li class="glare"><strong>Geração</strong><span>Os trechos e a pergunta vão para o modelo, que é instruído a responder <em>somente</em> com base neles.</span></li>
+        <li class="glare"><strong>Citação</strong><span>A resposta mostra de qual arquivo e página veio cada informação. Se não achar, o assistente avisa.</span></li>
+      </ol>
+      <p class="dica">Essa técnica se chama <strong>RAG</strong> (Retrieval-Augmented Generation, ou geração aumentada por recuperação).</p>
+
+      <h3 class="titulo-secao">Onde a IA é usada</h3>
+      <div class="tabela-rolavel">
+        <table>
+          <thead><tr><th>Área</th><th>Usa IA?</th><th>O que a IA faz</th></tr></thead>
+          <tbody>
+            <tr><td>Assistente IA (chat)</td><td><span class="etiqueta azul">Sim</span></td><td>Responde perguntas com base nos trechos do material, citando as fontes.</td></tr>
+            <tr><td>Resumo e flashcards</td><td><span class="etiqueta azul">Sim</span></td><td>Lê o PDF inteiro e gera um resumo de estudo ou cartões de pergunta e resposta.</td></tr>
+            <tr><td>Simulados</td><td><span class="etiqueta azul">Sim</span></td><td>Cria questões de múltipla escolha com explicação. A correção é automática, pelo gabarito.</td></tr>
+            <tr><td>Envio de PDFs</td><td><span class="etiqueta azul">Sim</span></td><td>Gera os embeddings usados na busca. O conteúdo do arquivo não é alterado.</td></tr>
+            <tr><td>Atividades</td><td><span class="etiqueta verde">Não</span></td><td>Publicadas e corrigidas pelo professor.</td></tr>
+            <tr><td>Calendário, videoaulas e chat da turma</td><td><span class="etiqueta verde">Não</span></td><td>Conteúdo escrito por alunos e professores.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="colunas colunas-ia">
+        <div class="cartao-form glare">
+          <h3>O que o assistente faz</h3>
+          <ul class="lista-ia pode">
+            <li>Explica conceitos do material com outras palavras</li>
+            <li>Resume aulas e cria perguntas de revisão</li>
+            <li>Aponta arquivo e página de cada informação</li>
+            <li>Avisa quando a resposta não está no material</li>
+          </ul>
+        </div>
+        <div class="cartao-form glare">
+          <h3>O que ele não faz</h3>
+          <ul class="lista-ia nao-pode">
+            <li>Usar conhecimento de fora dos PDFs da disciplina</li>
+            <li>Ler PDFs escaneados (só imagem, sem texto)</li>
+            <li>Lembrar de conversas anteriores: cada pergunta é independente</li>
+            <li>Substituir o professor, corrigir atividades ou dar notas</li>
+          </ul>
+        </div>
+        <div class="cartao-form glare">
+          <h3>Seus dados</h3>
+          <ul class="lista-ia">
+            <li>As perguntas e os trechos do material são enviados à API do <span data-ia="provedor">Google Gemini</span> para gerar a resposta.</li>
+            <li>Suas perguntas e as respostas ficam salvas, e o <strong>professor pode vê-las</strong> no Painel da turma.</li>
+            <li>Não escreva senhas, documentos ou dados pessoais nas perguntas.</li>
+          </ul>
+        </div>
+        <div class="cartao-form glare">
+          <h3>Uso responsável</h3>
+          <ul class="lista-ia">
+            <li>Use a IA para estudar, não para copiar respostas de atividades avaliadas.</li>
+            <li>Confira as fontes antes de confiar em uma resposta.</li>
+            <li>Se o assistente errar ou inventar algo, relate na aba <button type="button" class="link-ia" data-tela="suporte">Suporte</button>.</li>
+          </ul>
+        </div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-suporte" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-ajuda"/></svg></span>
+        <div>
+          <h2>Suporte</h2>
+          <p id="suporte-subtitulo">Respostas para as dúvidas mais comuns e um canal para relatar problemas.</p>
+        </div>
+      </header>
+
+      <label class="campo-busca busca-faq">
+        <svg><use href="#i-busca"/></svg>
+        <input type="search" id="busca-faq" placeholder="Buscar nas perguntas frequentes..." autocomplete="off" aria-label="Buscar nas perguntas frequentes">
+      </label>
+      <h3 class="titulo-secao">Perguntas frequentes</h3>
+      <div class="lista-animada"><div class="faq lista-animada-rolagem" id="faq" tabindex="0" aria-label="Perguntas frequentes (use as setas para navegar)"></div></div>
+      <p class="dica" id="faq-vazio" hidden>Nenhuma pergunta encontrada. Abra um chamado abaixo.</p>
+
+      <h3 class="titulo-secao">Não achou o que procurava?</h3>
+      <form id="form-chamado" class="cartao-form">
+        <h3>Abrir chamado</h3>
+        <div class="linha-campos">
+          <label>Assunto <input type="text" name="assunto" required maxlength="150" placeholder="Ex.: Erro ao enviar PDF"></label>
+          <label>Categoria
+            <select name="categoria">
+              <option>Dúvida de uso</option>
+              <option>Problema técnico</option>
+              <option>Assistente IA</option>
+              <option>Conta e acesso</option>
+              <option>Sugestão</option>
+            </select>
+          </label>
+        </div>
+        <label>Descreva o que aconteceu <small>(o que você fez, o que esperava e a mensagem de erro, se houver)</small>
+          <textarea name="mensagem" rows="4" required maxlength="5000"></textarea>
+        </label>
+        <button type="submit" class="botao-primario">Enviar chamado</button>
+        <p class="status" role="status"></p>
+      </form>
+
+      <h3 class="titulo-secao" id="titulo-chamados">Meus chamados</h3>
+      <div class="lista-animada"><div id="lista-chamados" class="lista-animada-rolagem" tabindex="0" aria-label="Chamados (use as setas para navegar)"></div></div>
+    </main>
+
     <main class="tela pagina" id="tela-config" hidden>
       <header class="cabecalho-pagina">
         <span class="icone-pagina"><svg><use href="#i-engrenagem"/></svg></span>
@@ -384,12 +513,17 @@
 
   <script src="app.js"></script>
   <script src="disciplinas.js"></script>
+  <script src="cursor-alvo.js"></script>
   <script src="simulados.js"></script>
   <script src="atividades.js"></script>
   <script src="calendario.js"></script>
   <script src="videos.js"></script>
   <script src="turma.js"></script>
   <script src="config.js"></script>
+  <script src="sobre-ia.js"></script>
+  <script src="suporte.js"></script>
+  <script src="lista-animada.js"></script>
+  <script src="brilho-especular.js"></script>
   <script src="botoes.js"></script>
 </body>
 </html>

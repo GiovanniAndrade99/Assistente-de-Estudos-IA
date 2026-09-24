@@ -15,6 +15,9 @@ generativa (Gemini):
   - **Videoaulas**: professor cadastra links (vídeos do YouTube tocam na própria página)
   - **Chat da turma**: conversa entre alunos e professor (atualiza a cada 4 s)
   - **Configurações**: nome, troca de senha, tema claro/escuro e encerrar outras sessões
+  - **Sobre o assistente IA**: identifica a IA, mostra os modelos em uso e explica onde ela é usada,
+    o que faz e não faz, o destino dos dados e o uso responsável
+  - **Suporte**: perguntas frequentes com busca e chamados (administradores respondem)
 
 ## Arquitetura
 
@@ -54,7 +57,9 @@ Rotas da API:
    ├─ /api/disciplinas/{id}/flashcards    → documento inteiro → Gemini (JSON) → cartões
    ├─ /api/disciplinas/{id}/simulado      → documento inteiro → Gemini (JSON) → questões
    ├─ /api/disciplinas/{id}/{eventos|atividades|videos|mensagens} → recursos da turma
-   └─ /api/professor/{notas|perguntas}    → painel da turma (só professores)
+   ├─ /api/professor/{notas|perguntas}    → painel da turma (só professores)
+   ├─ /api/suporte/chamados               → abrir, listar, responder (admin) e remover chamados
+   └─ /api/ia/sobre                       → modelos e parâmetros da IA em uso
         │
         ├──► SQLite (data/app.db): usuários, sessões, disciplinas, documentos, histórico
         ├──► Banco vetorial próprio (NumPy, data/indice): trechos + embeddings
@@ -80,11 +85,12 @@ assistente-estudos/
 │   ├── aplicacao/               # regra de negócio, um módulo por área
 │   │   ├── auth_service.py, disciplinas_service.py, documentos_service.py,
 │   │   │   chat_service.py, estudo_service.py, turma_service.py,
-│   │   │   professor_service.py, progresso_service.py
+│   │   │   professor_service.py, progresso_service.py, suporte_service.py,
+│   │   │   ia_service.py, demo_service.py (dados de demonstração)
 │   ├── api/                     # rotas FastAPI (finas) + dependências de autenticação
 │   │   ├── dependencias.py, auth_router.py, disciplinas_router.py, documentos_router.py,
 │   │   │   chat_router.py, estudo_router.py, turma_router.py, professor_router.py,
-│   │   │   progresso_router.py, saude_router.py
+│   │   │   progresso_router.py, saude_router.py, suporte_router.py, ia_router.py
 │   └── middlewares/
 │       └── observabilidade.py   # request ID, log de acesso e cabeçalhos de segurança
 ├── frontend/
@@ -92,6 +98,7 @@ assistente-estudos/
 │   ├── index.html / app.js     # app principal: menu, assistente IA e painel do professor
 │   ├── simulados.js / atividades.js / calendario.js
 │   ├── videos.js / turma.js / config.js   # uma tela do menu em cada arquivo
+│   ├── sobre-ia.js / suporte.js
 │   └── style.css
 ├── docs/
 │   ├── prompts.md                # histórico de versões dos prompts (para o relatório)
