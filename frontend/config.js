@@ -7,7 +7,7 @@ TELAS.config = {
   abrir() {
     formPerfil.nome.value = usuario.nome;
     formPerfil.email.value = usuario.email;
-    formPerfil.tipo.value = usuario.tipo === "professor" ? "Professor" : "Aluno";
+    formPerfil.tipo.value = usuario.administrador ? "Administrador" : usuario.tipo === "professor" ? "Professor" : "Aluno";
     const tema = document.documentElement.dataset.tema || "claro";
     for (const radio of document.querySelectorAll("input[name=tema]")) radio.checked = radio.value === tema;
     for (const status of document.querySelectorAll("#tela-config .status")) status.textContent = "";

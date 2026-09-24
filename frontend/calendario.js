@@ -256,7 +256,7 @@ function desenharLista() {
     div.innerHTML = `
       <div class="item-topo">
         <strong>${escaparHtml(i.titulo)}</strong>
-        ${i.usuario_id === usuario.id ? `<button type="button" class="remover" title="Remover">✕</button>` : ""}
+        ${i.demonstracao ? `<span class="selo-demonstracao">Exemplo</span>` : i.usuario_id === usuario.id ? `<button type="button" class="remover" title="Remover">✕</button>` : ""}
       </div>
       <small class="dica">${diaPorExtenso(i.data)} · ${i.hora ? `⏰ ${i.hora}` : "dia todo"} · ${nomes[i.tipo]}${
         i.autor && i.tipo === "turma" ? ` · ${escaparHtml(i.autor)}` : ""}</small>
