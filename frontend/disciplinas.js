@@ -11,7 +11,35 @@ TELAS.disciplinas = {
     if (!visaoGeral.length) grade.innerHTML = `<p class="dica carregando-grade">Carregando disciplinas...</p>`;
     visaoGeral = await chamarApi("/api/visao-geral");
     desenharDisciplinas();
+    if (usuario.tipo === "aluno") carregarMateriasParaMatricular();
   },
+};
+
+// ---------------------------------------------------------- adicionar matéria depois do cadastro
+
+async function carregarMateriasParaMatricular() {
+  const bloco = $("bloco-matricular");
+  const select = $("select-nova-materia");
+  const todas = await chamarApi("/api/disciplinas/publico");
+  const disponiveis = todas.filter((d) => !visaoGeral.some((v) => v.id === d.id));
+  bloco.hidden = !disponiveis.length;
+  select.textContent = "";
+  for (const d of disponiveis) select.appendChild(new Option(d.nome, String(d.id)));
+}
+
+$("botao-matricular").onclick = async () => {
+  const id = Number($("select-nova-materia").value);
+  if (!id) return;
+  try {
+    await chamarApi("/api/disciplinas/matricular", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ disciplina_ids: [id] }),
+    });
+    location.reload();
+  } catch (erro) {
+    alert(erro.message);
+  }
 };
 
 // Sem acento e em minúsculas: "Cálculo" e "calculo" batem na busca

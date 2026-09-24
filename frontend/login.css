@@ -1,6 +1,6 @@
-/* Tela de login: painel esquerdo decorativo (anéis + ícones flutuantes) e
-   painel direito com abas Entrar / Criar conta. Usa os mesmos tokens de
-   frontend/style.css (arquivo próprio porque login.html não carrega style.css). */
+/* Tela de login: painel esquerdo decorativo (ondas + logos de linguagens orbitando,
+   gerados em login.js) e painel direito com abas Entrar / Criar conta. Usa os mesmos
+   tokens de frontend/style.css (arquivo próprio porque login.html não carrega style.css). */
 
 :root {
   --paper: #faf8f4;
@@ -25,6 +25,11 @@
   --font-display: 'Fraunces', serif;
   --font-body: 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", sans-serif;
   --anel-foco: 0 0 0 3px var(--primary-tint);
+  /* Fundo do modo claro: leve degradê radial (mesmo tratamento do resto do site) */
+  --fundo-app:
+    radial-gradient(900px 640px at 100% -6%, var(--primary-tint) 0%, transparent 55%),
+    radial-gradient(760px 560px at 100% 100%, var(--accent-tint) 0%, transparent 52%),
+    var(--paper);
   color-scheme: light;
 }
 
@@ -46,6 +51,7 @@
   --danger: #e2695a;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
   --shadow-lg: 0 24px 52px -16px rgba(0, 0, 0, .65);
+  --fundo-app: var(--paper);  /* degradê é só no modo claro */
   color-scheme: dark;
 }
 
@@ -55,7 +61,7 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  background: var(--paper);
+  background: var(--fundo-app);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -69,43 +75,73 @@ button, input { font: inherit; color: inherit; }
   overflow: hidden; background: var(--primary-dark);
 }
 
-.anel {
-  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
-  border-radius: 50%; border: 1px solid rgba(255, 255, 255, .16);
-  animation: respirar 4s ease-in-out infinite;
+/* Círculos concêntricos que "respiram" atrás das órbitas */
+.ondas {
+  position: absolute; inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
 }
-.anel-1 { width: 560px; height: 560px; }
-.anel-2 { width: 400px; height: 400px; border-style: dashed; animation-delay: -1s; }
-.anel-3 { width: 260px; height: 260px; background: rgba(255, 255, 255, .06); animation-delay: -2s; }
-@keyframes respirar {
+.onda {
+  position: absolute; top: 50%; left: 50%;
+  border: 1px solid rgba(255, 255, 255, .16); border-radius: 50%;
+  background: rgba(255, 255, 255, .05);
+  animation: pulsar 2s ease infinite;
+}
+.onda:last-child { border-style: dashed; }
+@keyframes pulsar {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(.96); }
+  50% { transform: translate(-50%, -50%) scale(.9); }
 }
 
-.badge-flutuante {
-  position: absolute; width: 52px; height: 52px; border-radius: 16px;
-  background: #fff; display: grid; place-items: center;
+/* Logos de linguagens de programação girando em órbitas de raios diferentes (login.js).
+   isolation: isolate garante que o z-index abaixo só é comparado entre os filhos daqui,
+   então o texto (z-index maior) sempre fica por cima dos ícones, nunca o contrário. */
+.orbitas { position: absolute; inset: 0; display: grid; place-items: center; isolation: isolate; }
+.icone-orbita {
+  z-index: 0;
+  position: absolute; top: 50%; left: 50%;
+  width: var(--tamanho); height: var(--tamanho);
+  margin: calc(var(--tamanho) / -2) 0 0 calc(var(--tamanho) / -2);
+  display: grid; place-items: center; padding: calc(var(--tamanho) * .16);
+  border-radius: 50%; background: #fff;
   box-shadow: 0 12px 24px rgba(15, 20, 50, .28);
+  animation: orbitar calc(var(--duracao) * 1s) linear infinite;
+  animation-delay: calc(var(--atraso) * -1s);
 }
-.badge-flutuante svg { width: 22px; height: 22px; }
+.icone-orbita.reverso { animation-direction: reverse; }
+.icone-orbita img { width: 100%; height: 100%; object-fit: contain; }
+.icone-orbita.sem-imagem { font-size: 9px; font-weight: 700; color: var(--ink); }
+@keyframes orbitar {
+  from { transform: rotate(0deg) translateY(calc(var(--raio) * 1px)) rotate(0deg); }
+  to { transform: rotate(360deg) translateY(calc(var(--raio) * 1px)) rotate(-360deg); }
+}
+.trilha {
+  position: absolute; top: 50%; left: 50%; z-index: 0;
+  border: 1px solid rgba(255, 255, 255, .12); border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none;
+}
 
 .conteudo-visual {
   position: relative; z-index: 1; height: 100%;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
-  text-align: center; padding: 0 48px; gap: 18px; color: #fff;
+  text-align: center; padding: 0 48px; gap: 18px; color: #fff; pointer-events: none;
 }
 .marca-icone {
-  width: 56px; height: 56px; border-radius: 16px; background: rgba(255, 255, 255, .14);
+  position: relative; overflow: hidden;
+  width: 56px; height: 56px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .08));
+  border: 1px solid rgba(255, 255, 255, .28);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .3);
   display: grid; place-items: center;
 }
-.marca-icone svg { width: 26px; height: 26px; }
+.marca-icone svg { position: relative; z-index: 1; width: 26px; height: 26px; }
 .conteudo-visual h1 { margin: 0; font: 600 40px/1.15 var(--font-display); }
 .conteudo-visual p { margin: 0; max-width: 340px; font: 400 15px/1.6 var(--font-body); color: rgba(255, 255, 255, .72); }
 
 /* ---------- lado do formulário ---------- */
 .lado-form {
   flex-grow: 1; min-height: 100dvh; padding: 40px 24px;
-  display: flex; align-items: center; justify-content: center; background: var(--paper);
+  display: flex; align-items: center; justify-content: center; background: var(--fundo-app);
 }
 .cartao-login { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 26px; }
 
@@ -157,6 +193,32 @@ button, input { font: inherit; color: inherit; }
 .pill-tipo input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 .pill-tipo input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
 
+.opcional { font-weight: 400; color: var(--ink-3); }
+
+.lista-materias { display: flex; flex-direction: column; gap: 8px; }
+.linha-materia { display: flex; gap: 8px; }
+.linha-materia select {
+  flex: 1; height: 42px; padding: 0 12px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink); font: 400 14px var(--font-body);
+}
+.linha-materia select:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--anel-foco); }
+.botao-remover-materia {
+  flex-shrink: 0; width: 42px; height: 42px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink-3); font-size: 20px; line-height: 1; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.botao-remover-materia:hover { border-color: var(--danger); color: var(--danger); }
+
+.botao-add-materia {
+  display: flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 14px;
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); align-self: flex-start;
+  background: none; color: var(--ink-2); font: 600 13px var(--font-body); cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.botao-add-materia svg { width: 16px; height: 16px; }
+.botao-add-materia:hover { border-color: var(--primary); color: var(--primary); }
+
 .botao-entrar {
   width: 100%; height: 46px; border: none; border-radius: var(--radius-sm); cursor: pointer;
   background: var(--primary); color: var(--on-primary); font: 600 14px var(--font-body);
@@ -172,5 +234,7 @@ button, input { font: inherit; color: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anel { animation: none; }
+  .onda, .icone-orbita { animation: none; }
+  /* Sem girar, mas cada ícone mantém sua posição no círculo (senão todos colapsam no centro) */
+  .icone-orbita { transform: rotate(var(--angulo)) translateY(calc(var(--raio) * 1px)) rotate(calc(var(--angulo) * -1)); }
 }

@@ -39,6 +39,11 @@
   --font-body: 'IBM Plex Sans', system-ui, -apple-system, "Segoe UI", sans-serif;
   --largura-conteudo: 1100px;
   --largura-chat: 820px;
+  /* Fundo do modo claro: leve degradê radial (dois tons de destaque) sobre o papel base */
+  --fundo-app:
+    radial-gradient(1100px 760px at 4% -8%, var(--primary-tint) 0%, transparent 55%),
+    radial-gradient(900px 640px at 102% 4%, var(--accent-tint) 0%, transparent 52%),
+    var(--paper);
   color-scheme: light;
 }
 
@@ -113,6 +118,7 @@ button.botao-origem[data-pressionado="true"] {
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
   --shadow-md: 0 6px 18px -4px rgba(0, 0, 0, .5);
   --shadow-lg: 0 24px 52px -16px rgba(0, 0, 0, .65);
+  --fundo-app: var(--paper);  /* degradê é só no modo claro */
   color-scheme: dark;
 }
 
@@ -125,7 +131,7 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.5;
-  background: var(--paper);
+  background: var(--fundo-app);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -257,10 +263,19 @@ input[type=radio], input[type=checkbox] { accent-color: var(--primary); }
 .app { flex: 1; display: flex; min-height: 0; }
 
 .logo-icone {
+  position: relative; overflow: hidden;
   display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px;
-  border-radius: 10px; background: var(--primary); color: #fff;
+  border-radius: 10px; color: #fff;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  box-shadow: 0 4px 12px -3px color-mix(in srgb, var(--primary) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .3);
 }
-.logo-icone svg { width: 19px; height: 19px; }
+/* Brilho de vidro no canto superior esquerdo, por cima do degradê */
+.logo-icone::after {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, .4), transparent 60%);
+}
+.logo-icone svg { position: relative; z-index: 1; width: 19px; height: 19px; }
 
 .lateral {
   width: 272px; flex-shrink: 0;
@@ -358,7 +373,7 @@ input[type=radio], input[type=checkbox] { accent-color: var(--primary); }
 .fundo-lateral { display: none; }
 
 /* ---------- 5. páginas ---------- */
-.pagina { flex: 1; min-width: 0; overflow-y: auto; padding: 32px 40px 56px; background: var(--paper); }
+.pagina { flex: 1; min-width: 0; overflow-y: auto; padding: 32px 40px 56px; background: var(--fundo-app); }
 .pagina > * { max-width: var(--largura-conteudo); margin-inline: auto; }
 
 .cabecalho-pagina { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
@@ -751,6 +766,12 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 }
 .campo-busca input:focus ~ kbd, .campo-busca input:not(:placeholder-shown) ~ kbd { display: none; }
 .filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.matricular-materia { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.matricular-materia select {
+  height: 38px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink); font: 500 .85rem var(--font-body);
+}
 .filtro {
   min-height: 36px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 999px;
   background: var(--surface); color: var(--ink-2); font-size: .85rem; font-weight: 500;
