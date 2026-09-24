@@ -117,6 +117,18 @@ CREATE TABLE IF NOT EXISTS aulas_concluidas (
     PRIMARY KEY (usuario_id, documento_id)
 );
 
+-- Suporte: chamados abertos pelos usuários e respondidos por um administrador
+CREATE TABLE IF NOT EXISTS chamados_suporte (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    categoria     TEXT NOT NULL,
+    assunto       TEXT NOT NULL,
+    mensagem      TEXT NOT NULL,
+    resposta      TEXT,           -- NULL enquanto ninguém responder
+    respondido_em TEXT,
+    criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS mensagens_turma (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     disciplina_id INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
