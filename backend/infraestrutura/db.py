@@ -144,6 +144,16 @@ CREATE TABLE IF NOT EXISTS tentativas_login (
     email       TEXT NOT NULL,
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Matrícula do aluno nas disciplinas que escolheu (no cadastro ou depois).
+-- Tabela nova: o backfill de quem já tinha conta fica em criar_tabelas().
+CREATE TABLE IF NOT EXISTS matriculas (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    aluno_id      INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    disciplina_id INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (aluno_id, disciplina_id)
+);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as
@@ -173,11 +183,21 @@ def conectar():
 
 def criar_tabelas() -> None:
     with conectar() as c:
+        matriculas_e_nova = not c.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'matriculas'"
+        ).fetchone()
         c.executescript(ESQUEMA)
         for tabela, coluna, tipo in MIGRACOES:
             colunas = {linha["name"] for linha in c.execute(f"PRAGMA table_info({tabela})")}
             if coluna not in colunas:
                 c.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+        if matriculas_e_nova:
+            # Quem já tinha conta antes da matrícula por disciplina existir via todas as
+            # disciplinas; sem isso perderia acesso ao que já estudava.
+            c.execute(
+                """INSERT INTO matriculas (aluno_id, disciplina_id)
+                   SELECT u.id, d.id FROM usuarios u, disciplinas d WHERE u.tipo = 'aluno'"""
+            )
 
 
 def consultar(sql: str, parametros: tuple = ()) -> list[dict]:

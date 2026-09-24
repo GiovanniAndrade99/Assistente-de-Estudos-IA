@@ -26,6 +26,7 @@ class Cadastro(BaseModel):
     email: str
     senha: str
     tipo: str
+    disciplinas: list[int] = []
 
 
 class Login(BaseModel):
@@ -35,7 +36,7 @@ class Login(BaseModel):
 
 @router.post("/cadastro")
 def cadastrar(dados: Cadastro, resposta: Response):
-    usuario, token, duracao = auth_service.cadastrar(dados.nome, dados.email, dados.senha, dados.tipo)
+    usuario, token, duracao = auth_service.cadastrar(dados.nome, dados.email, dados.senha, dados.tipo, dados.disciplinas)
     _definir_cookie(resposta, token, duracao)
     return usuario
 
