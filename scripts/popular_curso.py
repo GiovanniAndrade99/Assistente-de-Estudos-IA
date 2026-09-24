@@ -44,7 +44,7 @@ li { margin-bottom: 3pt; }
 """
 
 
-def servidor_rodando(porta: int = 8000) -> bool:
+def servidor_rodando(porta: int = 8002) -> bool:
     with socket.socket() as s:
         s.settimeout(0.5)
         return s.connect_ex(("127.0.0.1", porta)) == 0
@@ -131,7 +131,7 @@ def main() -> None:
         saida.reconfigure(encoding="utf-8")
 
     if servidor_rodando():
-        sys.exit("O servidor está rodando na porta 8000. Pare-o (Ctrl+C) e rode este script de novo.")
+        sys.exit("O servidor está rodando na porta 8002. Pare-o (Ctrl+C) e rode este script de novo.")
 
     db.criar_tabelas()
     professor_id = obter_professor(args.email.strip().lower(), args.senha)

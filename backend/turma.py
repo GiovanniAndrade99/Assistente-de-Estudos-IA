@@ -52,7 +52,8 @@ class NovoEvento(BaseModel):
 @router.get("/eventos")
 def listar_eventos(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
     return db.consultar(
-        """SELECT e.id, e.titulo, e.data, e.hora, e.descricao, e.publico, e.usuario_id, u.nome AS autor
+        """SELECT e.id, e.titulo, e.data, e.hora, e.descricao, e.publico, e.usuario_id, u.nome AS autor,
+                  (u.email LIKE 'demo-%@exemplo.local') AS demonstracao
            FROM eventos e JOIN usuarios u ON u.id = e.usuario_id
            WHERE e.disciplina_id = ? AND (e.publico = 1 OR e.usuario_id = ?)
            ORDER BY e.data, e.hora IS NOT NULL, e.hora, e.id""",  # "dia todo" antes dos com horário
@@ -233,7 +234,8 @@ class NovaMensagem(BaseModel):
 def listar_mensagens(disciplina_id: int, depois: int = 0, usuario: dict = Depends(usuario_atual)):
     """Sem `depois`: as 100 últimas. Com `depois`: só as novas (o frontend consulta a cada poucos segundos)."""
     linhas = db.consultar(
-        """SELECT m.id, m.texto, m.criado_em, m.usuario_id, u.nome AS autor, u.tipo
+        """SELECT m.id, m.texto, m.criado_em, m.usuario_id, u.nome AS autor, u.tipo,
+                  (u.email LIKE 'demo-%@exemplo.local') AS demonstracao
            FROM mensagens_turma m JOIN usuarios u ON u.id = m.usuario_id
            WHERE m.disciplina_id = ? AND m.id > ?
            ORDER BY m.id DESC LIMIT 100""",

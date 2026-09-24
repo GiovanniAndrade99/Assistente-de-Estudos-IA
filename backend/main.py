@@ -1,8 +1,8 @@
 """API do Assistente de Estudos (FastAPI).
 
 Rodar a partir da pasta raiz do projeto:
-    uvicorn backend.main:app --reload
-e abrir http://localhost:8000
+    uvicorn backend.main:app --reload --port 8002
+e abrir http://localhost:8002
 """
 import shutil
 from pathlib import Path
@@ -13,10 +13,12 @@ from fastapi.staticfiles import StaticFiles
 from google.genai.errors import APIError
 from pydantic import BaseModel, Field
 
-from . import auth, config, db, estudo, rag, turma
+from . import auth, config, db, demo, estudo, rag, turma
 from .auth import somente_professor, usuario_atual
 
 db.criar_tabelas()
+for _disciplina_demo in db.consultar("SELECT id FROM disciplinas"):
+    demo.popular_dados_demo(_disciplina_demo["id"])
 app = FastAPI(title="Assistente de Estudos")
 app.include_router(auth.router)
 app.include_router(turma.router)
@@ -88,6 +90,7 @@ def criar_disciplina(dados: NovaDisciplina, usuario: dict = Depends(usuario_atua
     if db.consultar_um("SELECT id FROM disciplinas WHERE nome = ?", (nome,)):
         raise HTTPException(400, "Já existe uma disciplina com esse nome.")
     novo_id = db.executar("INSERT INTO disciplinas (nome, criado_por) VALUES (?, ?)", (nome, usuario["id"]))
+    demo.popular_dados_demo(novo_id)
     return {"id": novo_id, "nome": nome}
 
 

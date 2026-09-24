@@ -12,6 +12,7 @@ import hashlib
 import hmac
 import re
 import secrets
+import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -44,7 +45,7 @@ def usuario_atual(request: Request) -> dict:
     """Use em rotas que exigem login: `usuario: dict = Depends(usuario_atual)`."""
     token = request.cookies.get(NOME_COOKIE)
     usuario = token and db.consultar_um(
-        """SELECT u.id, u.nome, u.email, u.tipo FROM sessoes s
+        """SELECT u.id, u.nome, u.email, u.tipo, u.administrador FROM sessoes s
            JOIN usuarios u ON u.id = s.usuario_id WHERE s.token = ?""",
         (token,),
     )
@@ -54,7 +55,7 @@ def usuario_atual(request: Request) -> dict:
 
 
 def somente_professor(usuario: dict = Depends(usuario_atual)) -> dict:
-    if usuario["tipo"] != "professor":
+    if usuario["tipo"] != "professor" and not usuario.get("administrador"):
         raise HTTPException(403, "Área restrita a professores.")
     return usuario
 
@@ -92,15 +93,17 @@ def cadastrar(dados: Cadastro, resposta: Response):
         raise HTTPException(400, "A senha precisa ter pelo menos 6 caracteres.")
     if dados.tipo not in ("aluno", "professor"):
         raise HTTPException(400, "Tipo deve ser 'aluno' ou 'professor'.")
-    if db.consultar_um("SELECT id FROM usuarios WHERE email = ?", (email,)):
-        raise HTTPException(400, "Este e-mail já está cadastrado.")
-
-    usuario_id = db.executar(
-        "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
-        (nome, email, gerar_hash(dados.senha), dados.tipo),
-    )
+    try:
+        usuario_id = db.executar(
+            "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
+            (nome, email, gerar_hash(dados.senha), dados.tipo),
+        )
+    except sqlite3.IntegrityError as erro:
+        if "usuarios.email" in str(erro).lower() or "unique constraint" in str(erro).lower():
+            raise HTTPException(400, "Este e-mail já está cadastrado. Entre na conta ou use outro e-mail.") from erro
+        raise HTTPException(400, "Não foi possível criar a conta. Confira os dados e tente novamente.") from erro
     _iniciar_sessao(resposta, usuario_id)
-    return {"id": usuario_id, "nome": nome, "email": email, "tipo": dados.tipo}
+    return {"id": usuario_id, "nome": nome, "email": email, "tipo": dados.tipo, "administrador": 0}
 
 
 @router.post("/login")
@@ -110,7 +113,7 @@ def entrar(dados: Login, resposta: Response):
     if not usuario or not conferir_senha(dados.senha, usuario["senha_hash"]):
         raise HTTPException(401, "E-mail ou senha incorretos.")
     _iniciar_sessao(resposta, usuario["id"])
-    return {k: usuario[k] for k in ("id", "nome", "email", "tipo")}
+    return {k: usuario[k] for k in ("id", "nome", "email", "tipo", "administrador")}
 
 
 @router.post("/logout")

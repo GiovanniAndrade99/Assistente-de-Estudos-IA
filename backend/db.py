@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email       TEXT NOT NULL UNIQUE,
     senha_hash  TEXT NOT NULL,
     tipo        TEXT NOT NULL CHECK (tipo IN ('aluno', 'professor')),
+    administrador INTEGER NOT NULL DEFAULT 0 CHECK (administrador IN (0, 1)),
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -129,6 +130,7 @@ CREATE TABLE IF NOT EXISTS mensagens_turma (
 # acrescenta em tabelas antigas, então criar_tabelas() adiciona com ALTER TABLE.
 MIGRACOES = [
     ("eventos", "hora", "TEXT"),
+    ("usuarios", "administrador", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 
