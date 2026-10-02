@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="cookies.css">
   <!-- Aplica o tema salvo antes de desenhar a página (evita "piscar" claro → escuro) -->
   <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || "claro"; } catch {}</script>
 </head>
@@ -38,6 +39,7 @@
       <symbol id="i-seta-dir" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
       <symbol id="i-ajuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></symbol>
       <symbol id="i-brilho" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></symbol>
+      <symbol id="i-formatura" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
     </defs>
   </svg>
 
@@ -64,7 +66,7 @@
           <div class="linha-disciplina">
             <select id="select-disciplina" aria-label="Disciplina"></select>
             <button id="botao-nova-disciplina" type="button" class="botao-icone" title="Nova disciplina"
-              aria-label="Nova disciplina"><svg><use href="#i-mais"/></svg></button>
+              aria-label="Nova disciplina" data-so-professor hidden><svg><use href="#i-mais"/></svg></button>
           </div>
           <button id="botao-remover-disciplina" type="button" class="link-perigo" hidden>Remover disciplina</button>
         </section>
@@ -82,12 +84,13 @@
           <button type="button" data-tela="painel" data-so-professor hidden><svg><use href="#i-grafico"/></svg><span>Painel da turma</span></button>
           <h2>Ajuda</h2>
           <button type="button" data-tela="sobre-ia"><svg><use href="#i-brilho"/></svg><span>Sobre o assistente IA</span></button>
+          <button type="button" data-tela="parcerias"><svg><use href="#i-formatura"/></svg><span>Parcerias com universidades</span></button>
           <button type="button" data-tela="suporte"><svg><use href="#i-ajuda"/></svg><span>Suporte</span></button>
         </nav>
 
         <section id="secao-materiais" class="grupo-lateral" hidden>
           <h2>Materiais</h2>
-          <label class="botao-upload">
+          <label class="botao-upload" data-so-professor hidden>
             <svg><use href="#i-upload"/></svg> Enviar PDF
             <input type="file" id="input-pdf" accept=".pdf" multiple hidden>
           </label>
@@ -336,6 +339,40 @@
       </div>
     </main>
 
+    <main class="tela pagina" id="tela-parcerias" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-formatura"/></svg></span>
+        <div>
+          <h2>Parcerias com universidades</h2>
+          <p>Universidades conhecidas com curso de TI: nota do MEC e inscrições do vestibular.</p>
+        </div>
+      </header>
+
+      <section class="hero-parcerias">
+        <span class="hero-selo">🎓 Rumo à graduação em TI</span>
+        <h3>Encontre a universidade certa para o seu futuro em tecnologia</h3>
+        <p>Compare a nota do MEC, veja os cursos de TI e acompanhe as inscrições dos principais vestibulares do país.</p>
+        <div id="resumo-parcerias" class="resumo-parcerias"></div>
+      </section>
+
+      <div id="destaque-inscricao" class="destaque-inscricao" hidden></div>
+
+      <div class="barra-parcerias">
+        <label class="busca-parcerias">
+          <svg aria-hidden="true"><use href="#i-busca"/></svg>
+          <input type="search" id="busca-parcerias" placeholder="Buscar universidade, sigla ou cidade..." autocomplete="off">
+        </label>
+        <select id="regiao-parcerias" aria-label="Filtrar por região"></select>
+      </div>
+      <div class="filtros-parcerias" id="filtros-parcerias" role="group" aria-label="Filtrar por tipo de ingresso"></div>
+
+      <div id="lista-parcerias" class="grade-parcerias"></div>
+
+      <p class="aviso-fontes glare">ℹ️ O <strong>CPC</strong> (Conceito Preliminar de Curso, de 1 a 5) vem do ranking
+        do MEC compilado por portais de vestibular e pode estar desatualizado; as datas vêm dos sites oficiais.
+        Confira sempre o <strong>edital oficial</strong> antes de se inscrever.</p>
+    </main>
+
     <main class="tela pagina" id="tela-sobre-ia" hidden>
       <header class="cabecalho-pagina">
         <span class="icone-pagina"><svg><use href="#i-brilho"/></svg></span>
@@ -479,11 +516,11 @@
         <form id="form-senha" class="cartao-form">
           <h3>Trocar senha</h3>
           <label>Senha atual <input type="password" name="senha_atual" required autocomplete="current-password"></label>
-          <label>Nova senha <small>(mínimo 6 caracteres)</small>
-            <input type="password" name="nova_senha" required minlength="6" autocomplete="new-password">
+          <label>Nova senha <small>(10 a 128 caracteres)</small>
+            <input type="password" name="nova_senha" required minlength="10" maxlength="128" autocomplete="new-password">
           </label>
           <label>Confirmar nova senha
-            <input type="password" name="confirmar" required minlength="6" autocomplete="new-password">
+            <input type="password" name="confirmar" required minlength="10" maxlength="128" autocomplete="new-password">
           </label>
           <button type="submit" class="botao-primario">Trocar senha</button>
           <p class="status" role="status"></p>
@@ -504,6 +541,13 @@
           <button type="button" id="botao-encerrar-sessoes" class="botao-secundario">Encerrar outras sessões</button>
           <p class="status" id="status-sessoes" role="status"></p>
         </div>
+
+        <div class="cartao-form">
+          <h3>Privacidade e cookies</h3>
+          <p class="dica">Este sistema usa apenas o cookie essencial de sessão.</p>
+          <a href="/privacidade.html">Abrir aviso de privacidade</a><br>
+          <button type="button" id="abrir-aviso-cookies" class="botao-secundario">Rever aviso de cookies</button>
+        </div>
       </div>
     </main>
   </div>
@@ -521,9 +565,11 @@
   <script src="turma.js"></script>
   <script src="config.js"></script>
   <script src="sobre-ia.js"></script>
+  <script src="parcerias.js"></script>
   <script src="suporte.js"></script>
   <script src="lista-animada.js"></script>
   <script src="brilho-especular.js"></script>
   <script src="botoes.js"></script>
+  <script src="cookies.js"></script>
 </body>
 </html>

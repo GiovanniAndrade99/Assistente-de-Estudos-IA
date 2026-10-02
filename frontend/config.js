@@ -62,3 +62,5 @@ $("botao-encerrar-sessoes").onclick = async () => {
     $("status-sessoes").textContent = `✖ ${erro.message}`;
   }
 };
+
+$("abrir-aviso-cookies").onclick = () => window.mostrarAvisoCookies?.();
