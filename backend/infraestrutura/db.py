@@ -144,6 +144,16 @@ CREATE TABLE IF NOT EXISTS tentativas_login (
     email       TEXT NOT NULL,
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Rate limit genérico (aplicacao/limite_service.py): quantas requisições uma
+-- chave (usuário ou IP) fez a uma rota, para bloquear automação/abuso de custo.
+CREATE TABLE IF NOT EXISTS limite_uso (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    chave       TEXT NOT NULL,
+    rota        TEXT NOT NULL,
+    criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_limite_uso_chave_rota ON limite_uso (chave, rota, criado_em);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as

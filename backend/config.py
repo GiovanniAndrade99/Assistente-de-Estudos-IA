@@ -19,6 +19,9 @@ DURACAO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 LIMITE_TENTATIVAS_LOGIN = 5
 JANELA_TENTATIVAS_LOGIN_MINUTOS = 15
 
+# Exigido no cadastro para criar conta de professor (ver .env.example).
+CODIGO_PROFESSOR = os.getenv("CODIGO_PROFESSOR", "")
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")

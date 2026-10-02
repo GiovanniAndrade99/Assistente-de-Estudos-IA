@@ -11,6 +11,7 @@ bloqueiam novas tentativas com 429 — proteção simples contra força bruta.
 Fica no banco (não em memória) para sobreviver ao `--reload` do uvicorn e
 funcionar igual com múltiplos processos/workers.
 """
+import hmac
 import logging
 import re
 import sqlite3
@@ -20,6 +21,7 @@ from fastapi import HTTPException
 from .. import config
 from ..core.seguranca import conferir_senha, gerar_hash_senha, gerar_token_sessao, hash_token
 from ..infraestrutura import db
+from . import limite_service
 
 logger = logging.getLogger("auth")
 
@@ -92,16 +94,29 @@ def encerrar_outras_sessoes(usuario_id: int, token_atual: str) -> None:
 
 # ---------------------------------------------------------------- cadastro / login
 
-def cadastrar(nome: str, email: str, senha: str, tipo: str) -> tuple[dict, str, int]:
+def cadastrar(
+    nome: str, email: str, senha: str, tipo: str, ip: str = "desconhecido", codigo_professor: str = "",
+) -> tuple[dict, str, int]:
+    # Limite por IP (não por e-mail): evita que um script crie muitas contas
+    # trocando de e-mail a cada tentativa.
+    limite_service.limitar(f"ip:{ip}", "cadastro", limite=5, janela_minutos=15)
     nome, email = nome.strip(), email.strip().lower()
     if not nome:
         raise HTTPException(400, "Informe seu nome.")
     if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
         raise HTTPException(400, "E-mail inválido.")
-    if len(senha) < 6:
-        raise HTTPException(400, "A senha precisa ter pelo menos 6 caracteres.")
+    if not 10 <= len(senha) <= 128:
+        raise HTTPException(400, "A senha precisa ter entre 10 e 128 caracteres.")
     if tipo not in ("aluno", "professor"):
         raise HTTPException(400, "Tipo deve ser 'aluno' ou 'professor'.")
+    # Sem isso, qualquer visitante marcaria "Professor" na tela de cadastro e
+    # ganharia o painel do professor. Só quem recebeu o código (config.py/.env)
+    # pode criar conta desse tipo.
+    if tipo == "professor":
+        if not config.CODIGO_PROFESSOR:
+            raise HTTPException(500, "Cadastro de professor desativado: CODIGO_PROFESSOR não configurado.")
+        if not hmac.compare_digest(codigo_professor.strip(), config.CODIGO_PROFESSOR):
+            raise HTTPException(403, "Código de professor incorreto.")
     if db.consultar_um("SELECT id FROM usuarios WHERE email = ?", (email,)):
         raise HTTPException(400, "Este e-mail já está cadastrado.")
 
@@ -124,8 +139,14 @@ def entrar(email: str, senha: str) -> tuple[dict, str, int]:
     # Mesma mensagem para e-mail ou senha errados: não revela quais e-mails existem
     if not usuario or not conferir_senha(senha, usuario["senha_hash"]):
         _registrar_tentativa_falha(email)
-        logger.info("login_falhou", extra={"email": email})
+        logger.info("login_falhou")
         raise HTTPException(401, "E-mail ou senha incorretos.")
+    # Atualização gradual de hashes antigos após autenticação válida.
+    if int(usuario["senha_hash"].split("$", 1)[0]) < 600_000:
+        db.executar(
+            "UPDATE usuarios SET senha_hash = ? WHERE id = ?",
+            (gerar_hash_senha(senha), usuario["id"]),
+        )
     token, duracao = _iniciar_sessao(usuario["id"])
     logger.info("login_ok", extra={"usuario_id": usuario["id"]})
     return {k: usuario[k] for k in ("id", "nome", "email", "tipo", "administrador")}, token, duracao
@@ -145,8 +166,8 @@ def trocar_senha(usuario: dict, senha_atual: str, nova_senha: str, token_atual: 
     salvo = db.consultar_um("SELECT senha_hash FROM usuarios WHERE id = ?", (usuario["id"],))
     if not conferir_senha(senha_atual, salvo["senha_hash"]):
         raise HTTPException(400, "Senha atual incorreta.")
-    if len(nova_senha) < 6:
-        raise HTTPException(400, "A nova senha precisa ter pelo menos 6 caracteres.")
+    if not 10 <= len(nova_senha) <= 128:
+        raise HTTPException(400, "A nova senha precisa ter entre 10 e 128 caracteres.")
     db.executar("UPDATE usuarios SET senha_hash = ? WHERE id = ?", (gerar_hash_senha(nova_senha), usuario["id"]))
     encerrar_outras_sessoes(usuario["id"], token_atual)  # quem tinha a senha antiga perde o acesso
     logger.info("senha_trocada", extra={"usuario_id": usuario["id"]})

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from ..aplicacao import disciplinas_service
-from .dependencias import usuario_atual
+from .dependencias import somente_professor, usuario_atual
 
 router = APIRouter()
 
@@ -17,8 +17,8 @@ def listar_disciplinas(usuario: dict = Depends(usuario_atual)):
 
 
 @router.post("/api/disciplinas")
-def criar_disciplina(dados: NovaDisciplina, usuario: dict = Depends(usuario_atual)):
-    return disciplinas_service.criar_disciplina(dados.nome, usuario["id"])
+def criar_disciplina(dados: NovaDisciplina, professor: dict = Depends(somente_professor)):
+    return disciplinas_service.criar_disciplina(dados.nome, professor["id"])
 
 
 @router.delete("/api/disciplinas/{disciplina_id}")

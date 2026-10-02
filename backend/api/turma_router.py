@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ..aplicacao import turma_service
-from .dependencias import somente_professor, usuario_atual
+from .dependencias import professor_da_disciplina, usuario_atual
 
 # Toda rota deste arquivo recebe {disciplina_id} e já confere se ela existe
 router = APIRouter(
@@ -63,13 +63,13 @@ def listar_atividades(disciplina_id: int, usuario: dict = Depends(usuario_atual)
 
 
 @router.post("/atividades")
-def criar_atividade(disciplina_id: int, dados: NovaAtividade, professor: dict = Depends(somente_professor)):
+def criar_atividade(disciplina_id: int, dados: NovaAtividade, professor: dict = Depends(professor_da_disciplina)):
     novo_id = turma_service.criar_atividade(disciplina_id, professor["id"], dados.titulo, dados.descricao, dados.prazo)
     return {"id": novo_id}
 
 
 @router.delete("/atividades/{atividade_id}")
-def remover_atividade(disciplina_id: int, atividade_id: int, professor: dict = Depends(somente_professor)):
+def remover_atividade(disciplina_id: int, atividade_id: int, professor: dict = Depends(professor_da_disciplina)):
     turma_service.remover_atividade(disciplina_id, atividade_id)
     return {"ok": True}
 
@@ -82,13 +82,13 @@ def entregar_atividade(disciplina_id: int, atividade_id: int, dados: Entrega,
 
 
 @router.get("/atividades/{atividade_id}/entregas")
-def listar_entregas(disciplina_id: int, atividade_id: int, professor: dict = Depends(somente_professor)):
+def listar_entregas(disciplina_id: int, atividade_id: int, professor: dict = Depends(professor_da_disciplina)):
     return turma_service.listar_entregas(disciplina_id, atividade_id)
 
 
 @router.put("/atividades/{atividade_id}/entregas/{entrega_id}")
 def corrigir_entrega(disciplina_id: int, atividade_id: int, entrega_id: int, dados: Correcao,
-                     professor: dict = Depends(somente_professor)):
+                     professor: dict = Depends(professor_da_disciplina)):
     turma_service.corrigir_entrega(disciplina_id, atividade_id, entrega_id, dados.nota, dados.comentario)
     return {"ok": True}
 
@@ -107,13 +107,13 @@ def listar_videos(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
 
 
 @router.post("/videos")
-def adicionar_video(disciplina_id: int, dados: NovoVideo, professor: dict = Depends(somente_professor)):
+def adicionar_video(disciplina_id: int, dados: NovoVideo, professor: dict = Depends(professor_da_disciplina)):
     novo_id = turma_service.adicionar_video(disciplina_id, professor["id"], dados.titulo, dados.url, dados.descricao)
     return {"id": novo_id}
 
 
 @router.delete("/videos/{video_id}")
-def remover_video(disciplina_id: int, video_id: int, professor: dict = Depends(somente_professor)):
+def remover_video(disciplina_id: int, video_id: int, professor: dict = Depends(professor_da_disciplina)):
     turma_service.remover_video(disciplina_id, video_id)
     return {"ok": True}
 

@@ -4,7 +4,7 @@ Rotas ficam finas: só leem a requisição, chamam a camada de aplicação
 (aplicacao/auth_service.py) e devolvem a resposta HTTP.
 """
 from fastapi import APIRouter, Depends, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .. import config
 from ..aplicacao import auth_service
@@ -17,25 +17,29 @@ router = APIRouter(prefix="/api/auth")
 def _definir_cookie(resposta: Response, token: str, duracao_segundos: int) -> None:
     resposta.set_cookie(
         NOME_COOKIE, token, httponly=True, samesite="lax",
-        secure=config.APP_ENV == "production", max_age=duracao_segundos,
+        secure=config.APP_ENV == "production", max_age=duracao_segundos, path="/",
     )
 
 
 class Cadastro(BaseModel):
-    nome: str
-    email: str
-    senha: str
+    nome: str = Field(max_length=120)
+    email: str = Field(max_length=254)
+    senha: str = Field(min_length=10, max_length=128)
     tipo: str
+    codigo_professor: str = Field(default="", max_length=128)
 
 
 class Login(BaseModel):
-    email: str
-    senha: str
+    email: str = Field(max_length=254)
+    senha: str = Field(max_length=128)
 
 
 @router.post("/cadastro")
-def cadastrar(dados: Cadastro, resposta: Response):
-    usuario, token, duracao = auth_service.cadastrar(dados.nome, dados.email, dados.senha, dados.tipo)
+def cadastrar(dados: Cadastro, request: Request, resposta: Response):
+    ip = request.client.host if request.client else "desconhecido"
+    usuario, token, duracao = auth_service.cadastrar(
+        dados.nome, dados.email, dados.senha, dados.tipo, ip, dados.codigo_professor,
+    )
     _definir_cookie(resposta, token, duracao)
     return usuario
 
@@ -52,7 +56,7 @@ def sair(request: Request, resposta: Response):
     token = request.cookies.get(NOME_COOKIE)
     if token:
         auth_service.encerrar_sessao(token)
-    resposta.delete_cookie(NOME_COOKIE)
+    resposta.delete_cookie(NOME_COOKIE, path="/", secure=config.APP_ENV == "production", httponly=True, samesite="lax")
     return {"ok": True}
 
 
@@ -68,8 +72,8 @@ class Perfil(BaseModel):
 
 
 class TrocaSenha(BaseModel):
-    senha_atual: str
-    nova_senha: str
+    senha_atual: str = Field(max_length=128)
+    nova_senha: str = Field(min_length=10, max_length=128)
 
 
 @router.put("/perfil")

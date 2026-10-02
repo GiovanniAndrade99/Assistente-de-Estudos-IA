@@ -21,17 +21,17 @@ class ResultadoSimulado(BaseModel):
 
 @router.post("/api/disciplinas/{disciplina_id}/resumo")
 def resumo(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
-    return estudo_service.resumir(disciplina_id, nome_seguro(dados.arquivo))
+    return estudo_service.resumir(disciplina_id, nome_seguro(dados.arquivo), usuario["id"])
 
 
 @router.post("/api/disciplinas/{disciplina_id}/flashcards")
 def flashcards(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
-    return estudo_service.gerar_flashcards(disciplina_id, nome_seguro(dados.arquivo), dados.quantidade)
+    return estudo_service.gerar_flashcards(disciplina_id, nome_seguro(dados.arquivo), usuario["id"], dados.quantidade)
 
 
 @router.post("/api/disciplinas/{disciplina_id}/simulado")
 def simulado(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
-    return estudo_service.gerar_simulado(disciplina_id, nome_seguro(dados.arquivo), dados.quantidade)
+    return estudo_service.gerar_simulado(disciplina_id, nome_seguro(dados.arquivo), usuario["id"], dados.quantidade)
 
 
 @router.post("/api/disciplinas/{disciplina_id}/simulado/resultado")
