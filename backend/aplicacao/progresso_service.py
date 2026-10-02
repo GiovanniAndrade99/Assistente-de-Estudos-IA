@@ -4,10 +4,20 @@ from fastapi import HTTPException
 from ..infraestrutura import db
 
 
-def visao_geral(usuario_id: int) -> list[dict]:
-    """Todas as disciplinas com suas aulas (e se o usuário já estudou cada uma) e atividades."""
-    disciplinas = {d["id"]: {**d, "aulas": [], "atividades": []}
-                   for d in db.consultar("SELECT id, nome FROM disciplinas ORDER BY nome")}
+def visao_geral(usuario: dict) -> list[dict]:
+    """Disciplinas do usuário (matriculadas, no caso do aluno; todas, no caso do professor)
+    com suas aulas (e se o usuário já estudou cada uma) e atividades."""
+    usuario_id = usuario["id"]
+    if usuario["tipo"] == "aluno":
+        linhas = db.consultar(
+            """SELECT d.id, d.nome FROM disciplinas d
+               JOIN matriculas m ON m.disciplina_id = d.id AND m.aluno_id = ?
+               ORDER BY d.nome""",
+            (usuario_id,),
+        )
+    else:
+        linhas = db.consultar("SELECT id, nome FROM disciplinas ORDER BY nome")
+    disciplinas = {d["id"]: {**d, "aulas": [], "atividades": []} for d in linhas}
     for aula in db.consultar(
         """SELECT doc.id, doc.disciplina_id, doc.arquivo, (c.documento_id IS NOT NULL) AS concluida
            FROM documentos doc
@@ -15,7 +25,9 @@ def visao_geral(usuario_id: int) -> list[dict]:
            ORDER BY doc.arquivo""",
         (usuario_id,),
     ):
-        disciplinas[aula.pop("disciplina_id")]["aulas"].append({**aula, "concluida": bool(aula["concluida"])})
+        disciplina = disciplinas.get(aula.pop("disciplina_id"))
+        if disciplina:
+            disciplina["aulas"].append({**aula, "concluida": bool(aula["concluida"])})
     for atividade in db.consultar(
         """SELECT a.id, a.disciplina_id, a.titulo, a.prazo, e.criado_em AS entregue_em, e.nota,
                   (SELECT COUNT(*) FROM entregas WHERE atividade_id = a.id) AS total_entregas
@@ -24,7 +36,9 @@ def visao_geral(usuario_id: int) -> list[dict]:
            ORDER BY a.prazo, a.id""",
         (usuario_id,),
     ):
-        disciplinas[atividade.pop("disciplina_id")]["atividades"].append(atividade)
+        disciplina = disciplinas.get(atividade.pop("disciplina_id"))
+        if disciplina:
+            disciplina["atividades"].append(atividade)
     return list(disciplinas.values())
 
 

@@ -27,6 +27,7 @@ class Cadastro(BaseModel):
     senha: str = Field(min_length=10, max_length=128)
     tipo: str
     codigo_professor: str = Field(default="", max_length=128)
+    disciplinas: list[int] = []
 
 
 class Login(BaseModel):
@@ -38,7 +39,7 @@ class Login(BaseModel):
 def cadastrar(dados: Cadastro, request: Request, resposta: Response):
     ip = request.client.host if request.client else "desconhecido"
     usuario, token, duracao = auth_service.cadastrar(
-        dados.nome, dados.email, dados.senha, dados.tipo, ip, dados.codigo_professor,
+        dados.nome, dados.email, dados.senha, dados.tipo, ip, dados.codigo_professor, dados.disciplinas,
     )
     _definir_cookie(resposta, token, duracao)
     return usuario

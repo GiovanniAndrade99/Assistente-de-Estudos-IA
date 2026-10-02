@@ -13,7 +13,7 @@ class AulaConcluida(BaseModel):
 
 @router.get("/api/visao-geral")
 def visao_geral(usuario: dict = Depends(usuario_atual)):
-    return progresso_service.visao_geral(usuario["id"])
+    return progresso_service.visao_geral(usuario)
 
 
 @router.put("/api/aulas/{documento_id}/concluida")

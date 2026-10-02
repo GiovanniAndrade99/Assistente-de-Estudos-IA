@@ -22,6 +22,7 @@ from .. import config
 from ..core.seguranca import conferir_senha, gerar_hash_senha, gerar_token_sessao, hash_token
 from ..infraestrutura import db
 from . import limite_service
+from . import disciplinas_service
 
 logger = logging.getLogger("auth")
 
@@ -96,6 +97,7 @@ def encerrar_outras_sessoes(usuario_id: int, token_atual: str) -> None:
 
 def cadastrar(
     nome: str, email: str, senha: str, tipo: str, ip: str = "desconhecido", codigo_professor: str = "",
+    disciplina_ids: list[int] | None = None,
 ) -> tuple[dict, str, int]:
     # Limite por IP (não por e-mail): evita que um script crie muitas contas
     # trocando de e-mail a cada tentativa.
@@ -127,6 +129,8 @@ def cadastrar(
         )
     except sqlite3.IntegrityError as erro:  # dois cadastros simultâneos com o mesmo e-mail
         raise HTTPException(400, "Este e-mail já está cadastrado. Entre na conta ou use outro e-mail.") from erro
+    if tipo == "aluno" and disciplina_ids:
+        disciplinas_service.matricular(usuario_id, disciplina_ids)
     token, duracao = _iniciar_sessao(usuario_id)
     logger.info("usuario_cadastrado", extra={"usuario_id": usuario_id, "tipo": tipo})
     return {"id": usuario_id, "nome": nome, "email": email, "tipo": tipo, "administrador": 0}, token, duracao
