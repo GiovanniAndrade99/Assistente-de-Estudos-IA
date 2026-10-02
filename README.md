@@ -1,187 +1,194 @@
-# 📚 Assistente de Estudos com RAG
+# Assistente de Estudos com RAG
 
-Aplicação para alunos e professores estudarem os materiais das disciplinas (PDFs) com IA
-generativa (Gemini):
+Aplicação web para apoiar alunos e professores no estudo de materiais em PDF. O sistema usa recuperação de trechos (RAG) e modelos Google Gemini para responder perguntas com referências ao arquivo e à página.
 
-- **Chat com o material** (técnica RAG): responde **citando a fonte** (arquivo e página) e
-  admite quando a resposta não está no material
-- **Resumo**, **flashcards** e **simulado** gerados a partir de um PDF
-- **Login** de alunos e professores, com materiais organizados **por disciplina**
-- **Painel do professor**: notas dos simulados e perguntas feitas pelos alunos
-- **Menu lateral** com as áreas de cada disciplina:
-  - **Simulados**: gera simulados e mostra o histórico de notas do aluno
-  - **Atividades**: professor publica com prazo e corrige com nota/comentário; aluno entrega
-  - **Calendário**: eventos da turma (professor), lembretes pessoais (aluno) e prazos das atividades
-  - **Videoaulas**: professor cadastra links (vídeos do YouTube tocam na própria página)
-  - **Chat da turma**: conversa entre alunos e professor (atualiza a cada 4 s)
-  - **Configurações**: nome, troca de senha, tema claro/escuro e encerrar outras sessões
-  - **Sobre o assistente IA**: identifica a IA, mostra os modelos em uso e explica onde ela é usada,
-    o que faz e não faz, o destino dos dados e o uso responsável
-  - **Suporte**: perguntas frequentes com busca e chamados (administradores respondem)
+## Funcionalidades
+
+- Cadastro e login de alunos e professores; o cadastro de professor exige um código configurado pelo responsável.
+- Disciplinas e materiais PDF organizados por turma.
+- Chat com o conteúdo indexado, com citações de arquivo e página e resposta de ausência de informação quando o material não sustenta a pergunta.
+- Resumo, flashcards e simulados gerados a partir de um PDF.
+- Atividades com prazo, entrega do aluno e correção pelo professor responsável.
+- Calendário com eventos da turma, lembretes individuais e prazos.
+- Videoaulas por links do YouTube e chat da turma com atualização periódica.
+- Painel do professor com perguntas e resultados de simulados da disciplina.
+- Visão geral de aulas concluídas, atividades e progresso.
+- Suporte com FAQ e chamados; administradores podem responder chamados.
+- Configurações de perfil, senha, tema e encerramento de outras sessões.
+- Aviso de privacidade e cookies: a aplicação usa cookie de sessão essencial, sem cookies próprios de analytics ou publicidade.
+
+- A tela **Parcerias com universidades** mostra um exemplo de interface com universidades, cursos, notas e vestibulares fictícios. Ela não consulta fontes oficiais nem representa parcerias reais.
 
 ## Arquitetura
 
-O backend segue uma Clean Architecture "leve", em camadas (cada uma só conhece a de baixo):
+O backend é organizado em camadas:
 
 ```
-[Navegador: HTML/CSS/JS]  login.html → index.html
-        │  fetch() JSON + cookie de sessão HttpOnly
-        ▼
-[api/]            rotas FastAPI: leem a requisição, chamam a camada de aplicação, devolvem JSON
-        │
-        ▼
-[aplicacao/]       regra de negócio (auth, disciplinas, documentos, chat, estudo, turma, professor, progresso)
-        │
-        ▼
-[infraestrutura/]  acesso a dados: SQLite (db.py), banco vetorial (vetores.py), Gemini (rag.py)
-        │
-        ▼
-[core/]            funções puras sem dependência de framework (hash de senha/token)
+Navegador (HTML, CSS, JavaScript)
+    ↓ fetch() / JSON / cookie HttpOnly
+backend/api/             rotas FastAPI e dependências de autorização
+    ↓
+backend/aplicacao/       regras de negócio e limites de uso
+    ↓
+backend/infraestrutura/  SQLite, índice vetorial e integração Gemini
+backend/core/            funções de segurança independentes do framework
 ```
 
-Toda requisição passa antes por uma middleware (`middlewares/observabilidade.py`) que gera um
-**Request ID** único (ou aproveita o `X-Request-ID` enviado pelo cliente), devolve esse id no
-cabeçalho da resposta e em qualquer corpo de erro (`{"detail": ..., "request_id": ...}`), e grava
-uma linha de **log estruturado em JSON** (`infraestrutura/logging_setup.py`) com método, rota,
-status, duração e esse mesmo id — assim dá para achar, a partir de um erro relatado pelo usuário,
-exatamente as linhas de log daquela chamada.
+O pipeline de documentos extrai texto por página, divide em trechos, gera embeddings e os guarda em um índice vetorial próprio baseado em NumPy. No chat, a pergunta também vira embedding; os trechos mais semelhantes são enviados ao Gemini para produzir uma resposta com referências.
 
-Rotas da API:
-```
-   ├─ /api/health                         → healthcheck (usado por monitoramento)
-   ├─ /api/auth/...                       → cadastro, login, logout, usuário atual
-   ├─ /api/disciplinas                    → listar / criar / remover disciplinas
-   ├─ /api/disciplinas/{id}/documentos    → upload: PDF → trechos → embeddings → banco vetorial
-   ├─ /api/disciplinas/{id}/chat          → pergunta → busca → prompt → Gemini → resposta com citações
-   ├─ /api/disciplinas/{id}/resumo        → documento inteiro → Gemini → resumo
-   ├─ /api/disciplinas/{id}/flashcards    → documento inteiro → Gemini (JSON) → cartões
-   ├─ /api/disciplinas/{id}/simulado      → documento inteiro → Gemini (JSON) → questões
-   ├─ /api/disciplinas/{id}/{eventos|atividades|videos|mensagens} → recursos da turma
-   ├─ /api/professor/{notas|perguntas}    → painel da turma (só professores)
-   ├─ /api/suporte/chamados               → abrir, listar, responder (admin) e remover chamados
-   └─ /api/ia/sobre                       → modelos e parâmetros da IA em uso
-        │
-        ├──► SQLite (data/app.db): usuários, sessões, disciplinas, documentos, histórico
-        ├──► Banco vetorial próprio (NumPy, data/indice): trechos + embeddings
-        └──► Gemini API: embeddings + geração de texto (com modelos reserva)
-```
+O SQLite guarda usuários, sessões, disciplinas, documentos, perguntas e respostas, notas, eventos, atividades e entregas, mensagens, chamados e registros de limites de uso. PDFs ficam em data/uploads e os vetores em data/indice.
 
-## Estrutura
+A middleware de observabilidade atribui um Request ID, registra método, rota, status e duração em logs JSON e inclui o identificador em respostas. Também define cabeçalhos de segurança. Respostas da API recebem Cache-Control: no-store.
 
-```
-assistente-estudos/
-├── backend/
-│   ├── main.py                 # app factory: logging, middlewares, routers, exception handlers
-│   ├── excecoes.py             # exception handlers (sempre com request_id no corpo)
-│   ├── config.py               # chaves, modelos, parâmetros e variáveis de ambiente
-│   ├── prompts.py              # todos os prompts do projeto
-│   ├── core/
-│   │   └── seguranca.py        # hash de senha (PBKDF2) e de token de sessão — sem dependências
-│   ├── infraestrutura/
-│   │   ├── db.py                # banco SQLite: tabelas e funções de consulta
-│   │   ├── rag.py                # pipeline RAG: extração, trechos, embeddings, busca, resposta
-│   │   ├── vetores.py            # banco vetorial com NumPy (similaridade de cosseno)
-│   │   └── logging_setup.py     # logging estruturado em JSON
-│   ├── aplicacao/               # regra de negócio, um módulo por área
-│   │   ├── auth_service.py, disciplinas_service.py, documentos_service.py,
-│   │   │   chat_service.py, estudo_service.py, turma_service.py,
-│   │   │   professor_service.py, progresso_service.py, suporte_service.py,
-│   │   │   ia_service.py, demo_service.py (dados de demonstração)
-│   ├── api/                     # rotas FastAPI (finas) + dependências de autenticação
-│   │   ├── dependencias.py, auth_router.py, disciplinas_router.py, documentos_router.py,
-│   │   │   chat_router.py, estudo_router.py, turma_router.py, professor_router.py,
-│   │   │   progresso_router.py, saude_router.py, suporte_router.py, ia_router.py
-│   └── middlewares/
-│       └── observabilidade.py   # request ID, log de acesso e cabeçalhos de segurança
-├── frontend/
-│   ├── login.html / login.js   # tela de entrar / criar conta
-│   ├── index.html / app.js     # app principal: menu, assistente IA e painel do professor
-│   ├── simulados.js / atividades.js / calendario.js
-│   ├── videos.js / turma.js / config.js   # uma tela do menu em cada arquivo
-│   ├── sobre-ia.js / suporte.js
-│   └── style.css
-├── docs/
-│   ├── prompts.md                # histórico de versões dos prompts (para o relatório)
-│   └── diario-desenvolvimento.md # problemas, decisões e testes (para o relatório)
-├── exemplos/
-│   └── exemplo_aulas_ia.pdf      # PDF de demonstração
-├── requirements.txt
-└── .env.example
-```
+## Rotas principais da API
+
+As rotas de saúde, cadastro, login e logout são públicas. As demais rotas de dados exigem sessão autenticada, com permissões adicionais por função e pela disciplina quando aplicável.
+
+| Grupo | Rotas principais | Uso |
+|---|---|---|
+| Saúde | GET /api/health | Verifica acesso ao banco local |
+| Autenticação | /api/auth/... | Cadastro, login, logout, perfil, troca de senha e sessões |
+| Disciplinas | /api/disciplinas | Listagem, criação e remoção |
+| Materiais | /api/disciplinas/{id}/documentos | Listar, enviar e remover PDFs |
+| Estudo | /api/disciplinas/{id}/chat, /resumo, /flashcards, /simulado | Consultar material e gerar recursos |
+| Turma | /api/disciplinas/{id}/eventos, /atividades, /videos, /mensagens | Calendário, atividades, vídeos e chat |
+| Professor | /api/professor/notas, /api/professor/perguntas | Consultas da disciplina do professor |
+| Progresso | /api/visao-geral, /api/aulas/{id}/concluida, /api/lembretes | Acompanhamento de estudo |
+| Suporte | /api/suporte/chamados | Criar, listar, responder e remover chamados |
+| IA | /api/ia/sobre | Informa provedor, modelos e parâmetros RAG |
 
 ## Permissões
 
-| | Aluno | Professor |
-|---|:-:|:-:|
-| Criar disciplinas e enviar PDFs | ✅ | ✅ |
-| Chat, resumo, flashcards, simulado | ✅ | ✅ |
-| Remover disciplina | só quem criou | só quem criou |
-| Painel da turma (notas e perguntas dos alunos) | ❌ | ✅ |
+| Ação | Aluno | Professor responsável | Administrador |
+|---|:---:|:---:|:---:|
+| Consultar material e usar recursos de estudo | Sim | Sim | Sim |
+| Criar disciplina | Não | Sim | Sim |
+| Enviar/remover PDFs da disciplina | Não | Sim | Sim |
+| Gerenciar atividades, correções e videoaulas da disciplina | Não | Sim | Sim |
+| Entregar atividade e usar chat da turma | Sim | Sim | Sim |
+| Ver painel de notas e perguntas da disciplina | Não | Sim | Sim |
+| Responder chamados | Não | Não | Sim |
 
-Segurança:
-- Senhas: hash PBKDF2-SHA256 com sal (200 mil iterações).
-- Sessão: cookie HttpOnly + SameSite=Lax, `secure` quando `APP_ENV=production`; no banco fica só
-  o hash SHA-256 do token (nunca o valor bruto) e cada sessão expira (`DURACAO_SESSAO_SEGUNDOS`,
-  padrão 7 dias).
-- Login/cadastro: bloqueio temporário (429) após várias tentativas com senha errada seguidas
-  (`LIMITE_TENTATIVAS_LOGIN`/`JANELA_TENTATIVAS_LOGIN_MINUTOS` em `config.py`).
-- Upload de PDF: limitado a `TAMANHO_MAX_UPLOAD_MB` (padrão 20MB); nome de arquivo sempre
-  saneado (`Path(...).name`), sem permitir caminhos como `../../`.
-- Cabeçalhos de resposta: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` sempre;
-  `Strict-Transport-Security` quando `APP_ENV=production`.
-- Toda resposta de erro traz um `request_id` correlacionável com os logs do servidor (ver
-  "Arquitetura"), sem vazar detalhes internos em erros inesperados.
+A autorização para gerenciar uma disciplina confere se o usuário é o professor que a criou; administradores podem gerenciar todas. O cadastro público de professor só funciona quando CODIGO_PROFESSOR está definido no arquivo .env.
 
-*Limitação conhecida:* a nota do simulado é calculada no navegador, então um aluno com
-conhecimento técnico poderia enviar uma nota falsa. Em produção, a correção deveria ser feita
-no servidor.
+## Segurança implementada
 
-## Como rodar
+- Senhas derivadas com PBKDF2-HMAC-SHA256, sal individual e 600.000 iterações. Hashes antigos válidos são atualizados após login.
+- Tokens aleatórios de sessão; o banco guarda apenas o hash SHA-256 do token.
+- Cookie de sessão HttpOnly e SameSite=Lax, com validade de até sete dias; Secure é ativado quando APP_ENV=production.
+- Limite de cinco falhas de login por e-mail em 15 minutos e cinco cadastros por IP em 15 minutos.
+- Limites de uso no banco: 20 perguntas ao chat, 15 operações de estudo e 10 uploads por usuário, cada grupo em uma janela de cinco minutos.
+- Upload limitado a TAMANHO_MAX_UPLOAD_MB (20 MB por padrão), apenas PDF, nome saneado e leitura limitada em blocos.
+- Cabeçalhos X-Content-Type-Options, X-Frame-Options e Referrer-Policy; HSTS quando APP_ENV=production.
+- Mensagens de falha de login não registram o e-mail digitado nos logs.
+- Chaves e configuração local ficam em .env, que é ignorado pelo Git.
 
-1. Instale o **Python 3.11 ou mais novo** (em python.org, marque "Add Python to PATH").
-2. Pegue uma chave gratuita do Gemini em https://aistudio.google.com/apikey
-3. Na pasta do projeto:
+## Requisitos
 
-```bash
+- Python 3.11 ou mais recente.
+- Chave de API do Google Gemini para embeddings e geração de conteúdo.
+- Acesso à internet para chamadas ao Gemini, fontes do Google Fonts e recursos externos carregados pela interface.
+
+## Instalação e execução
+
+Na pasta do projeto:
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate          # Windows  (Linux/Mac: source .venv/bin/activate)
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env          # depois edite o .env e cole a chave
+Copy-Item .env.example .env
+```
+
+Edite .env e configure pelo menos GEMINI_API_KEY. Para permitir cadastros de professor, substitua o valor de exemplo de CODIGO_PROFESSOR por um código compartilhado apenas com os professores.
+
+Inicie o servidor:
+
+```powershell
 uvicorn backend.main:app --reload --port 8002
 ```
 
-4. Abra http://localhost:8002
+Acesse http://localhost:8002. Para Linux/macOS, a ativação do ambiente virtual é source .venv/bin/activate e a cópia do arquivo é cp .env.example .env.
 
-### Criar uma conta administrativa
+As configurações do Gemini podem ser alteradas no .env:
 
-Com o ambiente virtual ativado e na pasta raiz do projeto, execute `python -m scripts.criar_admin`.
-O comando pede nome, e-mail e senha no terminal; a senha não é exibida nem salva em texto puro.
-Administradores têm acesso às funções de professor.
+| Variável | Padrão | Finalidade |
+|---|---|---|
+| GEMINI_API_KEY | vazio | Chave de acesso ao Gemini |
+| GEMINI_MODEL | gemini-3.6-flash | Modelo principal de geração |
+| GEMINI_MODELS_FALLBACK | gemini-3.5-flash,gemini-3.1-flash-lite | Modelos tentados como reserva |
+| GEMINI_EMBED_MODEL | gemini-embedding-001 | Modelo de embeddings |
+| APP_ENV | development | Em production ativa Secure no cookie e HSTS |
+| LOG_LEVEL | INFO | Nível dos logs |
+| TAMANHO_MAX_UPLOAD_MB | 20 | Limite do PDF enviado |
 
-## Dados de demonstração: curso de Ciência da Computação
+O nome e a disponibilidade dos modelos dependem do provedor e da conta configurada. Se uma chamada falhar, confira os modelos disponíveis e atualize os valores no .env.
 
-Com o servidor **parado**, rode na pasta raiz:
+## Criar administrador
 
+Com o ambiente virtual ativado, execute na pasta raiz:
+
+```powershell
+python -m scripts.criar_admin
 ```
+
+O script solicita nome, e-mail e senha no terminal, sem exibir a senha digitada.
+
+## Dados de demonstração
+
+Para criar o curso de Ciência da Computação com disciplinas, PDFs, eventos e atividades, pare o servidor e execute:
+
+```powershell
 python -m scripts.popular_curso
 ```
 
-O script cria 11 disciplinas (do 1º ao 6º semestre), cada uma com 3 aulas em PDF já indexadas
-no RAG, as aulas e a prova no calendário e uma atividade com prazo. O conteúdo fica em
-`scripts/dados_curso_cc.py`. As disciplinas pertencem ao professor `professor.cc@exemplo.com`
-(senha `professor123`), criado se não existir; use `--email` para outro professor.
-Rodar de novo não duplica nada: só tenta de novo o que falhou.
+O processo usa a API do Gemini para indexar os PDFs, portanto depende de uma chave válida e de cota disponível. Pode ser retomado: itens já criados são ignorados. Por padrão, se ainda não existir a conta de demonstração, o script cria professor.cc@exemplo.com com a senha professor123. Essa credencial é somente para demonstração local; use --email para associar os dados a uma conta de professor existente e nunca reutilize a senha padrão.
 
-## Parâmetros para experimentar (em `backend/config.py`)
+## Estrutura do repositório
+
+```
+backend/
+  prompts.py           instruções usadas pelo modelo
+  api/                 rotas e autorização
+  aplicacao/           regras de negócio e limites
+  core/                hashing de senha e tokens
+  infraestrutura/      SQLite, RAG, vetores e logs
+  middlewares/          observabilidade e cabeçalhos
+  main.py              montagem da aplicação
+frontend/               telas, estilos e JavaScript
+  parcerias.js           conteúdo demonstrativo, explicitamente fictício
+scripts/                criação de administrador e dados de demonstração
+docs/                   diário, prompts e privacidade/segurança
+exemplos/               PDF de demonstração
+data/                   banco, PDFs e índice vetorial (gerados localmente)
+.env.example             exemplo de configuração
+requirements.txt         dependências Python
+```
+
+## Parâmetros do RAG
+
+Os parâmetros ficam em backend/config.py:
 
 | Parâmetro | Padrão | Efeito |
-|---|---|---|
-| `TAMANHO_TRECHO` | 1000 | Trechos maiores dão mais contexto, mas a busca fica menos precisa |
-| `SOBREPOSICAO` | 200 | Evita cortar uma ideia no meio de dois trechos |
-| `TOP_K` | 5 | Quantos trechos vão para o modelo por pergunta |
+|---|---:|---|
+| TAMANHO_TRECHO | 1000 caracteres | Tamanho aproximado de cada trecho |
+| SOBREPOSICAO | 200 caracteres | Contexto repetido entre trechos vizinhos |
+| TOP_K | 5 | Número de trechos recuperados para responder |
 
-Variar esses valores e registrar o resultado é um bom material para a **visão crítica** do relatório.
+Resumo, flashcards e simulados usam o texto extraído do PDF, limitado a 200.000 caracteres. O chat usa recuperação de trechos por similaridade de cosseno.
 
 ## Limitações conhecidas
-- PDFs escaneados (só imagem) não têm texto extraível. Seria preciso usar OCR.
-- O nível gratuito do Gemini tem limite de requisições por minuto.
+
+- A área de parcerias contém universidades, notas MEC e datas de vestibular fictícias, apenas para demonstrar a interface; não há integração com universidades nem consulta a dados oficiais.
+- PDFs escaneados sem camada de texto não são processados; o sistema não tem OCR.
+- Os resultados de simulados enviados ao histórico não são uma avaliação segura: o cliente informa a pontuação. Use-os como acompanhamento informal, não como nota oficial.
+- Resumo, flashcards e simulados podem usar apenas o início de documentos acima do limite de texto.
+- A disponibilidade, latência, limites e nomes de modelos Gemini podem mudar; chamadas dependem de internet e da cota da conta.
+- O aviso de privacidade descreve o comportamento técnico atual. Informações do controlador, canal de contato, retenção e processos de atendimento a titulares precisam ser definidos pelo responsável antes de uso público. Consulte docs/privacidade-e-seguranca.md.
+- Não há testes automatizados versionados no repositório no momento. O diário descreve verificações manuais realizadas durante o desenvolvimento.
+
+## Documentação de apoio
+
+- docs/diario-desenvolvimento.md: decisões, problemas encontrados e verificações.
+- docs/prompts.md: prompts usados e justificativas.
+- docs/privacidade-e-seguranca.md: controles existentes e providências operacionais de privacidade.

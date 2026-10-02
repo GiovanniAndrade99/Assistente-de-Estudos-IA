@@ -165,6 +165,9 @@ button, input { font: inherit; color: inherit; }
 .botao-entrar:hover { background: var(--primary-dark); }
 .botao-entrar:disabled { opacity: .6; cursor: wait; }
 
+.aviso-privacidade { padding: 0 20px 16px; text-align: center; color: var(--ink-3); font: 12px var(--font-body); }
+.aviso-privacidade a { color: var(--primary); }
+
 /* ---------- telas menores e acessibilidade ---------- */
 @media (max-width: 900px) {
   .lado-visual { display: none; }

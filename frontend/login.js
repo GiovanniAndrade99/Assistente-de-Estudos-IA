@@ -31,6 +31,17 @@ for (const aba of abas) {
   aba.addEventListener("click", () => mostrarForm(aba.dataset.aba));
 }
 
+// ---------------------------------------------------------- campo "código de professor"
+
+const campoCodigoProfessor = document.getElementById("campo-codigo-professor");
+for (const radio of formCadastrar.querySelectorAll('input[name="tipo"]')) {
+  radio.addEventListener("change", () => {
+    const professor = formCadastrar.querySelector('input[name="tipo"]:checked').value === "professor";
+    campoCodigoProfessor.hidden = !professor;
+    if (!professor) campoCodigoProfessor.querySelector("input").value = "";
+  });
+}
+
 // ---------------------------------------------------------- mostrar/ocultar senha
 
 const OLHO_ABERTO = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>`;
@@ -55,9 +66,17 @@ function validar(form) {
     let erro = "";
     if (!valor) erro = `${input.dataset.rotulo} é obrigatório.`;
     else if (input.type === "email" && !/^\S+@\S+\.\S+$/.test(valor)) erro = "E-mail inválido.";
-    else if (input.name === "senha" && input.value.length < 6) erro = "A senha precisa ter pelo menos 6 caracteres.";
+    else if (form === formCadastrar && input.name === "senha" && input.value.length < 10) erro = "A senha precisa ter pelo menos 10 caracteres.";
+    else if (input.name === "senha" && input.value.length > 128) erro = "A senha pode ter no máximo 128 caracteres.";
     input.closest(".campo").querySelector(".erro-campo").textContent = erro;
     if (erro && valido) input.focus();
+    valido &&= !erro;
+  }
+  if (form === formCadastrar && !campoCodigoProfessor.hidden) {
+    const codigo = document.getElementById("cad-codigo-professor");
+    const erro = codigo.value.trim() ? "" : "Informe o código de professor.";
+    codigo.closest(".campo").querySelector(".erro-campo").textContent = erro;
+    if (erro && valido) codigo.focus();
     valido &&= !erro;
   }
   return valido;

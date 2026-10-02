@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="cookies.css">
   <script>try { document.documentElement.dataset.tema = localStorage.getItem("tema") || "claro"; } catch {}</script>
 </head>
 <body>
@@ -95,7 +96,7 @@
             <label for="cad-senha">Senha</label>
             <div class="com-olho">
               <input type="password" id="cad-senha" name="senha" autocomplete="new-password"
-                placeholder="Mínimo de 6 caracteres" data-rotulo="Senha" required>
+                placeholder="Entre 10 e 128 caracteres" minlength="10" maxlength="128" data-rotulo="Senha" required>
               <button type="button" class="olho" aria-label="Mostrar senha"></button>
             </div>
             <p class="erro-campo"></p>
@@ -109,6 +110,13 @@
             </div>
           </div>
 
+          <div class="campo" id="campo-codigo-professor" hidden>
+            <label for="cad-codigo-professor">Código de professor</label>
+            <input type="text" id="cad-codigo-professor" name="codigo_professor" autocomplete="off"
+              placeholder="Pedido com a coordenação" maxlength="128">
+            <p class="erro-campo"></p>
+          </div>
+
           <p class="erro-geral" role="alert"></p>
           <button type="submit" class="botao-entrar">Criar conta</button>
         </form>
@@ -117,5 +125,7 @@
   </div>
 
   <script src="login.js"></script>
+  <script src="cookies.js"></script>
+  <p class="aviso-privacidade">Usamos apenas cookie necessário para manter sua sessão. <a href="/privacidade.html">Aviso de privacidade e cookies</a>.</p>
 </body>
 </html>
