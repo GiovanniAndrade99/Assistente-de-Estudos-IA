@@ -5,6 +5,7 @@ Aplicação web para apoiar alunos e professores no estudo de materiais em PDF. 
 ## Funcionalidades
 
 - Cadastro e login de alunos e professores; o cadastro de professor exige um código configurado pelo responsável.
+- Catálogo público de disciplinas; alunos podem escolher disciplinas no cadastro ou matricular-se depois. Alunos veem apenas as disciplinas em que estão matriculados.
 - Disciplinas e materiais PDF organizados por turma.
 - Chat com o conteúdo indexado, com citações de arquivo e página e resposta de ausência de informação quando o material não sustenta a pergunta.
 - Resumo, flashcards e simulados gerados a partir de um PDF.
@@ -48,7 +49,7 @@ As rotas de saúde, cadastro, login e logout são públicas. As demais rotas de 
 |---|---|---|
 | Saúde | GET /api/health | Verifica acesso ao banco local |
 | Autenticação | /api/auth/... | Cadastro, login, logout, perfil, troca de senha e sessões |
-| Disciplinas | /api/disciplinas | Listagem, criação e remoção |
+| Disciplinas | /api/disciplinas, /api/disciplinas/publico, /api/disciplinas/matricular | Catálogo, listagem conforme papel/matrícula, criação, matrícula e remoção |
 | Materiais | /api/disciplinas/{id}/documentos | Listar, enviar e remover PDFs |
 | Estudo | /api/disciplinas/{id}/chat, /resumo, /flashcards, /simulado | Consultar material e gerar recursos |
 | Turma | /api/disciplinas/{id}/eventos, /atividades, /videos, /mensagens | Calendário, atividades, vídeos e chat |
@@ -124,6 +125,19 @@ As configurações do Gemini podem ser alteradas no .env:
 
 O nome e a disponibilidade dos modelos dependem do provedor e da conta configurada. Se uma chamada falhar, confira os modelos disponíveis e atualize os valores no .env.
 
+## Testes automatizados
+
+Instale as dependências de desenvolvimento e execute a suíte na raiz do projeto:
+
+```powershell
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+Os testes cobrem hashing de senhas e tokens, cadastro/login/logout, migração de hash antigo, bloqueio de tentativas, autorização de professor, matrícula em disciplinas, Request ID e cabeçalhos de resposta. Eles usam um SQLite temporário e não chamam o Gemini nem alteram os dados em data/.
+
+Última execução nesta versão: **11 passaram**. Foram exibidos dois avisos de depreciação nas dependências; eles não afetaram o resultado.
+
 ## Criar administrador
 
 Com o ambiente virtual ativado, execute na pasta raiz:
@@ -185,7 +199,7 @@ Resumo, flashcards e simulados usam o texto extraído do PDF, limitado a 200.000
 - Resumo, flashcards e simulados podem usar apenas o início de documentos acima do limite de texto.
 - A disponibilidade, latência, limites e nomes de modelos Gemini podem mudar; chamadas dependem de internet e da cota da conta.
 - O aviso de privacidade descreve o comportamento técnico atual. Informações do controlador, canal de contato, retenção e processos de atendimento a titulares precisam ser definidos pelo responsável antes de uso público. Consulte docs/privacidade-e-seguranca.md.
-- Não há testes automatizados versionados no repositório no momento. O diário descreve verificações manuais realizadas durante o desenvolvimento.
+- Os testes automatizados cobrem fluxos de autenticação, autorização e matrícula. O pipeline de qualidade das respostas do Gemini ainda depende de avaliação manual com PDFs e perguntas de referência.
 
 ## Documentação de apoio
 
