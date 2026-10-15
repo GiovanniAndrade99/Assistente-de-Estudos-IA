@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, UploadFile
 
 from ..aplicacao import documentos_service
-from .dependencias import professor_da_disciplina, usuario_atual
+from .dependencias import participante_da_disciplina, professor_da_disciplina
 
 router = APIRouter()
 
 
 @router.get("/api/disciplinas/{disciplina_id}/documentos")
-def listar_documentos(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
+def listar_documentos(disciplina_id: int, usuario: dict = Depends(participante_da_disciplina)):
     return documentos_service.listar_documentos(disciplina_id, usuario["id"])
 
 

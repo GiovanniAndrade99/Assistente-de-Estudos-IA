@@ -18,11 +18,6 @@ from ..infraestrutura import db
 logger = logging.getLogger("turma")
 
 
-def conferir_disciplina(disciplina_id: int) -> None:
-    if not db.consultar_um("SELECT id FROM disciplinas WHERE id = ?", (disciplina_id,)):
-        raise HTTPException(404, "Disciplina não encontrada.")
-
-
 def _obrigatorio(valor: str, campo: str) -> str:
     valor = valor.strip()
     if not valor:

@@ -5,12 +5,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from ..aplicacao import turma_service
-from .dependencias import professor_da_disciplina, usuario_atual
+from .dependencias import participante_da_disciplina, professor_da_disciplina, usuario_atual
 
-# Toda rota deste arquivo recebe {disciplina_id} e já confere se ela existe
+# Toda rota deste arquivo recebe {disciplina_id}: só quem participa da disciplina
+# (admin, professor dono ou aluno matriculado) passa daqui; 404 se ela não existe.
 router = APIRouter(
     prefix="/api/disciplinas/{disciplina_id}",
-    dependencies=[Depends(turma_service.conferir_disciplina)],
+    dependencies=[Depends(participante_da_disciplina)],
 )
 
 

@@ -18,10 +18,10 @@ def visao_geral(usuario: dict = Depends(usuario_atual)):
 
 @router.put("/api/aulas/{documento_id}/concluida")
 def marcar_aula(documento_id: int, dados: AulaConcluida, usuario: dict = Depends(usuario_atual)):
-    progresso_service.marcar_aula(documento_id, usuario["id"], dados.concluida)
+    progresso_service.marcar_aula(documento_id, usuario, dados.concluida)
     return {"ok": True}
 
 
 @router.get("/api/lembretes")
 def lembretes_do_dia(data: str, usuario: dict = Depends(usuario_atual)):
-    return progresso_service.lembretes_do_dia(data, usuario["id"])
+    return progresso_service.lembretes_do_dia(data, usuario)

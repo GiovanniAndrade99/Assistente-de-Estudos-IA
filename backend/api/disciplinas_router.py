@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..aplicacao import disciplinas_service
@@ -32,11 +32,13 @@ def criar_disciplina(dados: NovaDisciplina, professor: dict = Depends(somente_pr
 
 @router.post("/api/disciplinas/matricular")
 def matricular(dados: Matricula, usuario: dict = Depends(usuario_atual)):
+    if usuario["tipo"] != "aluno":
+        raise HTTPException(403, "Só alunos se matriculam em disciplinas.")
     disciplinas_service.matricular(usuario["id"], dados.disciplina_ids)
     return {"ok": True}
 
 
 @router.delete("/api/disciplinas/{disciplina_id}")
 def remover_disciplina(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
-    disciplinas_service.remover_disciplina(disciplina_id, usuario["id"])
+    disciplinas_service.remover_disciplina(disciplina_id, usuario)
     return {"ok": True}

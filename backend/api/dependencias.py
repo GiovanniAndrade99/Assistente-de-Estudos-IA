@@ -1,6 +1,7 @@
 """Dependências do FastAPI usadas por praticamente toda rota autenticada."""
 from fastapi import Depends, HTTPException, Request
 
+from ..aplicacao import participacao_service
 from ..aplicacao.auth_service import NOME_COOKIE, usuario_da_sessao
 from ..infraestrutura import db
 
@@ -28,11 +29,23 @@ def professor_da_disciplina(disciplina_id: int, usuario: dict = Depends(usuario_
     """
     if usuario["tipo"] != "professor" and not usuario.get("administrador"):
         raise HTTPException(403, "Área restrita a professores.")
-    if usuario.get("administrador"):
-        return usuario
     disciplina = db.consultar_um("SELECT criado_por FROM disciplinas WHERE id = ?", (disciplina_id,))
     if not disciplina:
         raise HTTPException(404, "Disciplina não encontrada.")
-    if disciplina["criado_por"] != usuario["id"]:
+    if not usuario.get("administrador") and disciplina["criado_por"] != usuario["id"]:
         raise HTTPException(403, "Você só pode gerenciar disciplinas que você criou.")
+    return usuario
+
+
+def participante_da_disciplina(disciplina_id: int, usuario: dict = Depends(usuario_atual)) -> dict:
+    """Admin, professor dono ou aluno matriculado (aplicacao/participacao_service.py).
+
+    Sem isso, qualquer conta logada lia o chat da turma (nomes e mensagens),
+    eventos e materiais de qualquer disciplina e usava a IA sobre eles.
+    """
+    disciplina = db.consultar_um("SELECT id, criado_por FROM disciplinas WHERE id = ?", (disciplina_id,))
+    if not disciplina:
+        raise HTTPException(404, "Disciplina não encontrada.")
+    if not participacao_service.participa(usuario, disciplina):
+        raise HTTPException(403, "Você não participa desta disciplina.")
     return usuario

@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 from ..aplicacao import estudo_service
 from ..aplicacao.documentos_service import nome_seguro
-from .dependencias import usuario_atual
+from .dependencias import participante_da_disciplina
 
 router = APIRouter()
 
@@ -20,26 +20,26 @@ class ResultadoSimulado(BaseModel):
 
 
 @router.post("/api/disciplinas/{disciplina_id}/resumo")
-def resumo(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
+def resumo(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(participante_da_disciplina)):
     return estudo_service.resumir(disciplina_id, nome_seguro(dados.arquivo), usuario["id"])
 
 
 @router.post("/api/disciplinas/{disciplina_id}/flashcards")
-def flashcards(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
+def flashcards(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(participante_da_disciplina)):
     return estudo_service.gerar_flashcards(disciplina_id, nome_seguro(dados.arquivo), usuario["id"], dados.quantidade)
 
 
 @router.post("/api/disciplinas/{disciplina_id}/simulado")
-def simulado(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(usuario_atual)):
+def simulado(disciplina_id: int, dados: PedidoEstudo, usuario: dict = Depends(participante_da_disciplina)):
     return estudo_service.gerar_simulado(disciplina_id, nome_seguro(dados.arquivo), usuario["id"], dados.quantidade)
 
 
 @router.post("/api/disciplinas/{disciplina_id}/simulado/resultado")
-def salvar_resultado(disciplina_id: int, dados: ResultadoSimulado, usuario: dict = Depends(usuario_atual)):
+def salvar_resultado(disciplina_id: int, dados: ResultadoSimulado, usuario: dict = Depends(participante_da_disciplina)):
     estudo_service.salvar_resultado_simulado(disciplina_id, usuario["id"], dados.arquivo, dados.acertos, dados.total)
     return {"ok": True}
 
 
 @router.get("/api/disciplinas/{disciplina_id}/simulado/meus")
-def meus_resultados(disciplina_id: int, usuario: dict = Depends(usuario_atual)):
+def meus_resultados(disciplina_id: int, usuario: dict = Depends(participante_da_disciplina)):
     return estudo_service.meus_resultados_simulado(disciplina_id, usuario["id"])

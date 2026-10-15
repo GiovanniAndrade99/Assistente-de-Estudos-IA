@@ -2,21 +2,15 @@
 from fastapi import HTTPException
 
 from ..infraestrutura import db
+from . import participacao_service
 
 
 def visao_geral(usuario: dict) -> list[dict]:
-    """Disciplinas do usuário (matriculadas, no caso do aluno; todas, no caso do professor)
-    com suas aulas (e se o usuário já estudou cada uma) e atividades."""
+    """Disciplinas de que o usuário participa (matriculadas, no caso do aluno; as que
+    criou, no caso do professor; todas, para o admin) com aulas e atividades."""
     usuario_id = usuario["id"]
-    if usuario["tipo"] == "aluno":
-        linhas = db.consultar(
-            """SELECT d.id, d.nome FROM disciplinas d
-               JOIN matriculas m ON m.disciplina_id = d.id AND m.aluno_id = ?
-               ORDER BY d.nome""",
-            (usuario_id,),
-        )
-    else:
-        linhas = db.consultar("SELECT id, nome FROM disciplinas ORDER BY nome")
+    condicao, parametros = participacao_service.filtro_sql(usuario)
+    linhas = db.consultar(f"SELECT d.id, d.nome FROM disciplinas d WHERE {condicao} ORDER BY d.nome", parametros)
     disciplinas = {d["id"]: {**d, "aulas": [], "atividades": []} for d in linhas}
     for aula in db.consultar(
         """SELECT doc.id, doc.disciplina_id, doc.arquivo, (c.documento_id IS NOT NULL) AS concluida
@@ -42,9 +36,17 @@ def visao_geral(usuario: dict) -> list[dict]:
     return list(disciplinas.values())
 
 
-def marcar_aula(documento_id: int, usuario_id: int, concluida: bool) -> None:
-    if not db.consultar_um("SELECT id FROM documentos WHERE id = ?", (documento_id,)):
+def marcar_aula(documento_id: int, usuario: dict, concluida: bool) -> None:
+    disciplina = db.consultar_um(
+        """SELECT d.id, d.criado_por FROM documentos doc JOIN disciplinas d ON d.id = doc.disciplina_id
+           WHERE doc.id = ?""",
+        (documento_id,),
+    )
+    if not disciplina:
         raise HTTPException(404, "Aula não encontrada.")
+    if not participacao_service.participa(usuario, disciplina):
+        raise HTTPException(403, "Você não participa desta disciplina.")
+    usuario_id = usuario["id"]
     if concluida:
         db.executar("INSERT OR IGNORE INTO aulas_concluidas (usuario_id, documento_id) VALUES (?, ?)",
                     (usuario_id, documento_id))
@@ -53,12 +55,15 @@ def marcar_aula(documento_id: int, usuario_id: int, concluida: bool) -> None:
                     (usuario_id, documento_id))
 
 
-def lembretes_do_dia(data: str, usuario_id: int) -> list[dict]:
-    """Eventos com horário do dia (de todas as disciplinas), para o aviso na hora marcada."""
+def lembretes_do_dia(data: str, usuario: dict) -> list[dict]:
+    """Eventos com horário do dia nas disciplinas de que o usuário participa, para o
+    aviso na hora marcada."""
+    condicao, parametros = participacao_service.filtro_sql(usuario)
     return db.consultar(
-        """SELECT e.id, e.titulo, e.hora, e.descricao, d.nome AS disciplina
-           FROM eventos e JOIN disciplinas d ON d.id = e.disciplina_id
-           WHERE e.data = ? AND e.hora IS NOT NULL AND (e.publico = 1 OR e.usuario_id = ?)
-           ORDER BY e.hora""",
-        (data, usuario_id),
+        f"""SELECT e.id, e.titulo, e.hora, e.descricao, d.nome AS disciplina
+            FROM eventos e JOIN disciplinas d ON d.id = e.disciplina_id
+            WHERE e.data = ? AND e.hora IS NOT NULL AND (e.publico = 1 OR e.usuario_id = ?)
+              AND {condicao}
+            ORDER BY e.hora""",
+        (data, usuario["id"], *parametros),
     )

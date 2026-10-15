@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from .. import config
 from ..infraestrutura import db, rag
-from . import demo_service
+from . import demo_service, participacao_service
 
 
 def disciplina_ou_404(disciplina_id: int) -> dict:
@@ -16,15 +16,13 @@ def disciplina_ou_404(disciplina_id: int) -> dict:
 
 
 def listar_disciplinas(usuario: dict) -> list[dict]:
-    # Aluno só vê as disciplinas em que está matriculado; professor vê todas.
-    filtro_matricula = "JOIN matriculas m ON m.disciplina_id = d.id AND m.aluno_id = ?" \
-        if usuario["tipo"] == "aluno" else ""
-    parametros = (usuario["id"],) if usuario["tipo"] == "aluno" else ()
+    # Aluno vê as disciplinas em que está matriculado; professor, as que criou; admin, todas.
+    condicao, parametros = participacao_service.filtro_sql(usuario)
     return db.consultar(
         f"""SELECT d.id, d.nome, d.criado_por, u.nome AS criador,
                    (SELECT COUNT(*) FROM documentos WHERE disciplina_id = d.id) AS documentos
             FROM disciplinas d JOIN usuarios u ON u.id = d.criado_por
-            {filtro_matricula}
+            WHERE {condicao}
             ORDER BY d.nome""",
         parametros,
     )
@@ -59,9 +57,9 @@ def matricular(aluno_id: int, disciplina_ids: list[int]) -> None:
                      (aluno_id, disciplina["id"]))
 
 
-def remover_disciplina(disciplina_id: int, usuario_id: int) -> None:
-    if disciplina_ou_404(disciplina_id)["criado_por"] != usuario_id:
-        raise HTTPException(403, "Só quem criou a disciplina pode removê-la.")
+def remover_disciplina(disciplina_id: int, usuario: dict) -> None:
+    if disciplina_ou_404(disciplina_id)["criado_por"] != usuario["id"] and not usuario.get("administrador"):
+        raise HTTPException(403, "Só quem criou a disciplina (ou um administrador) pode removê-la.")
     rag.remover_documento(disciplina_id)
     shutil.rmtree(config.PASTA_UPLOADS / str(disciplina_id), ignore_errors=True)
     db.executar("DELETE FROM disciplinas WHERE id = ?", (disciplina_id,))
