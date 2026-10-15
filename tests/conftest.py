@@ -24,16 +24,22 @@ def ambiente_isolado(tmp_path, monkeypatch):
     from backend.infraestrutura import db, rag
     from backend.infraestrutura.vetores import BancoVetorial
 
-    monkeypatch.setattr(db, "ARQUIVO_DB", tmp_path / "teste.sqlite3")
+    # Toda pasta de dados aponta para tmp_path: nenhum teste toca em data/ do projeto
+    dados = tmp_path / "data"
+    (dados / "uploads").mkdir(parents=True)
+    monkeypatch.setattr(config, "PASTA_DADOS", dados)
+    monkeypatch.setattr(config, "PASTA_UPLOADS", dados / "uploads")
+    monkeypatch.setattr(config, "PASTA_INDICE", dados / "indice")
+    monkeypatch.setattr(config, "PASTA_BACKUPS", tmp_path / "backups")
+    monkeypatch.setattr(db, "ARQUIVO_DB", dados / "app.db")
+    monkeypatch.setattr(rag, "_banco", BancoVetorial(dados / "indice"))
+    monkeypatch.setattr(rag, "_cliente_gemini", None)
+
     monkeypatch.setattr(config, "APP_ENV", "development")
     monkeypatch.setattr(config, "CODIGO_PROFESSOR", "codigo-teste")
     monkeypatch.setattr(config, "DADOS_DEMO", False)
+    monkeypatch.setattr(config, "SEGREDO_APP", "segredo-de-teste")
     monkeypatch.setattr(config, "GEMINI_API_KEY", "")
-    pasta_uploads = tmp_path / "uploads"
-    pasta_uploads.mkdir()
-    monkeypatch.setattr(config, "PASTA_UPLOADS", pasta_uploads)
-    monkeypatch.setattr(rag, "_banco", BancoVetorial(tmp_path / "indice"))
-    monkeypatch.setattr(rag, "_cliente_gemini", None)
     db.criar_tabelas()
 
 

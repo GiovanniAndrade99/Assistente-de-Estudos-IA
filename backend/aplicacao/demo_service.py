@@ -50,11 +50,15 @@ def popular_dados_demo(disciplina_id: int) -> None:
     with db.conectar() as c:
         for titulo, dias, hora, descricao in eventos:
             data = (date.today() + timedelta(days=dias)).isoformat()
+            # Um evento por título: em vez de criar outro a cada dia, só move a data
+            # para continuar sendo um compromisso futuro.
             existente = c.execute(
-                "SELECT id FROM eventos WHERE disciplina_id = ? AND usuario_id = ? AND titulo = ? AND data = ?",
-                (disciplina_id, ids["demo-professor@exemplo.local"], titulo, data),
+                "SELECT id FROM eventos WHERE disciplina_id = ? AND usuario_id = ? AND titulo = ?",
+                (disciplina_id, ids["demo-professor@exemplo.local"], titulo),
             ).fetchone()
-            if not existente:
+            if existente:
+                c.execute("UPDATE eventos SET data = ? WHERE id = ?", (data, existente["id"]))
+            else:
                 c.execute(
                     "INSERT INTO eventos (disciplina_id, usuario_id, titulo, data, hora, descricao, publico) VALUES (?, ?, ?, ?, ?, ?, 1)",
                     (disciplina_id, ids["demo-professor@exemplo.local"], titulo, data, hora, descricao),

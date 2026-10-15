@@ -31,8 +31,25 @@ TAMANHO_MAX_UPLOAD_MB = int(os.getenv("TAMANHO_MAX_UPLOAD_MB", "20"))
 DURACAO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 
 # Rate limit de login/cadastro (proteção contra força bruta)
-LIMITE_TENTATIVAS_LOGIN = 5
+LIMITE_TENTATIVAS_LOGIN = 5           # falhas por e-mail na janela
 JANELA_TENTATIVAS_LOGIN_MINUTOS = 15
+# Por IP, a cada 15 minutos. Numa sala de aula muitos alunos saem pelo mesmo IP,
+# então os números não podem ser baixos demais.
+LIMITE_CADASTROS_POR_IP = int(os.getenv("LIMITE_CADASTROS_POR_IP", "10"))
+LIMITE_LOGINS_POR_IP = int(os.getenv("LIMITE_LOGINS_POR_IP", "100"))
+
+# Segredo do servidor para pseudonimizar (HMAC) IPs e e-mails guardados só para
+# limitar tentativas. Obrigatório em produção; gere com:
+#   python -c "import secrets; print(secrets.token_urlsafe(48))"
+SEGREDO_APP = os.getenv("SEGREDO_APP", "")
+
+# Retenção (LGPD, arts. 15 e 16): passado o prazo, os dados são apagados pela limpeza
+# automática (aplicacao/retencao_service.py). 0 desliga a regra.
+RETENCAO_HISTORICO_MESES = int(os.getenv("RETENCAO_HISTORICO_MESES", "12"))  # perguntas, notas e eventos
+RETENCAO_MENSAGENS_MESES = int(os.getenv("RETENCAO_MENSAGENS_MESES", "12"))  # chat da turma
+RETENCAO_CHAMADOS_MESES = int(os.getenv("RETENCAO_CHAMADOS_MESES", "12"))    # chamados já respondidos
+RETENCAO_BACKUP_DIAS = int(os.getenv("RETENCAO_BACKUP_DIAS", "30"))
+INTERVALO_LIMPEZA_HORAS = float(os.getenv("INTERVALO_LIMPEZA_HORAS", "6"))
 
 # Origens extras aceitas em requisições que alteram dados (separadas por vírgula),
 # para quando o frontend for servido de outro endereço. A própria origem é sempre aceita.
@@ -58,6 +75,7 @@ TEMPO_LIMITE_SEGUNDOS = 60  # por tentativa
 # Onde ficam banco, PDFs e índice. Configurável para rodar uma cópia isolada (testes, avaliação).
 PASTA_DADOS = Path(os.getenv("PASTA_DADOS", str(RAIZ / "data")))
 PASTA_UPLOADS = PASTA_DADOS / "uploads"
+PASTA_BACKUPS = Path(os.getenv("PASTA_BACKUPS", str(RAIZ / "backups")))
 PASTA_INDICE = PASTA_DADOS / "indice"
 PASTA_FRONTEND = RAIZ / "frontend"
 
@@ -68,3 +86,12 @@ TOP_K = 5               # quantos trechos são enviados ao modelo por pergunta
 
 PASTA_UPLOADS.mkdir(parents=True, exist_ok=True)
 PASTA_INDICE.mkdir(parents=True, exist_ok=True)
+
+
+def problemas_de_configuracao() -> list[str]:
+    """O que falta configurar. Em produção, qualquer item impede o servidor de subir."""
+    problemas = []
+    if not SEGREDO_APP:
+        problemas.append("SEGREDO_APP não definido: IPs e e-mails do controle de tentativas ficariam sem segredo fixo.")
+    return problemas
+

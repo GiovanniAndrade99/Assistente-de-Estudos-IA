@@ -20,10 +20,10 @@ def main() -> None:
     if db.consultar_um("SELECT id FROM usuarios WHERE email = ?", (email,)):
         raise SystemExit("Esse e-mail já está cadastrado. Use outro para a conta administrativa.")
 
-    senha = getpass.getpass("Senha (mínimo 6 caracteres): ")
+    senha = getpass.getpass("Senha (de 10 a 128 caracteres): ")
     confirmacao = getpass.getpass("Confirme a senha: ")
-    if len(senha) < 6:
-        raise SystemExit("A senha precisa ter pelo menos 6 caracteres.")
+    if not 10 <= len(senha) <= 128:
+        raise SystemExit("A senha precisa ter de 10 a 128 caracteres, como no cadastro do site.")
     if senha != confirmacao:
         raise SystemExit("As senhas não conferem.")
 

@@ -40,10 +40,8 @@ def criar_disciplina(nome: str, usuario: dict) -> dict:
     if db.consultar_um("SELECT id FROM disciplinas WHERE nome = ?", (nome,)):
         raise HTTPException(400, "Já existe uma disciplina com esse nome.")
     novo_id = db.executar("INSERT INTO disciplinas (nome, criado_por) VALUES (?, ?)", (nome, usuario["id"]))
-    if usuario["tipo"] == "aluno":
-        db.executar("INSERT OR IGNORE INTO matriculas (aluno_id, disciplina_id) VALUES (?, ?)",
-                     (usuario["id"], novo_id))
-    demo_service.popular_dados_demo(novo_id)
+    if config.DADOS_DEMO:
+        demo_service.popular_dados_demo(novo_id)
     return {"id": novo_id, "nome": nome}
 
 

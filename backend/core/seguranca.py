@@ -52,3 +52,8 @@ def gerar_token_sessao() -> str:
 
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def hmac_hex(segredo: bytes, valor: str) -> str:
+    """HMAC-SHA256 em hexadecimal: pseudônimo estável enquanto o segredo não mudar."""
+    return hmac.new(segredo, valor.encode(), hashlib.sha256).hexdigest()

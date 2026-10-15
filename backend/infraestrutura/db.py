@@ -137,16 +137,17 @@ CREATE TABLE IF NOT EXISTS mensagens_turma (
     criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tentativas de login/cadastro com falha, por e-mail (rate limit contra força bruta).
--- Tabela nova: não precisa de ALTER TABLE em bancos já existentes.
+-- Tentativas de login com falha (limite contra força bruta). `chave` é um pseudônimo
+-- (HMAC) do e-mail digitado, nunca o e-mail em si (aplicacao/pseudonimo.py).
 CREATE TABLE IF NOT EXISTS tentativas_login (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    email       TEXT NOT NULL,
+    chave       TEXT NOT NULL,
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Rate limit genérico (aplicacao/limite_service.py): quantas requisições uma
--- chave (usuário ou IP) fez a uma rota, para bloquear automação/abuso de custo.
+-- chave fez a uma rota, para bloquear automação/abuso de custo. A chave é
+-- "usuario:<id>" ou o pseudônimo (HMAC) de um IP; nunca o IP em si.
 CREATE TABLE IF NOT EXISTS limite_uso (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     chave       TEXT NOT NULL,
@@ -178,7 +179,8 @@ MIGRACOES = [
 @contextmanager
 def conectar():
     """Abre uma conexão, faz commit no fim (ou rollback se der erro) e fecha."""
-    conexao = sqlite3.connect(ARQUIVO_DB)
+    # timeout: espera até 15 s por um lock (a indexação em segundo plano grava em paralelo)
+    conexao = sqlite3.connect(ARQUIVO_DB, timeout=15)
     conexao.row_factory = sqlite3.Row  # linhas acessíveis por nome: linha["email"]
     conexao.execute("PRAGMA foreign_keys = ON")
     try:
@@ -191,6 +193,40 @@ def conectar():
         conexao.close()
 
 
+def _migracao_dados_1(c) -> None:
+    """Pseudonimização e limpeza de dados antigos (out/2026)."""
+    # Sessões criadas antes de expires_at existir nunca expiravam
+    c.execute("DELETE FROM sessoes WHERE expires_at IS NULL")
+    # Limites e tentativas guardavam IP e e-mail em texto puro. São registros de
+    # minutos, então é seguro apagar tudo; os novos já entram pseudonimizados.
+    c.execute("DELETE FROM limite_uso")
+    colunas = {linha["name"] for linha in c.execute("PRAGMA table_info(tentativas_login)")}
+    if "email" in colunas:
+        c.execute("DROP TABLE tentativas_login")
+        c.execute(
+            """CREATE TABLE tentativas_login (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   chave TEXT NOT NULL,
+                   criado_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"""
+        )
+    # Eventos de demonstração eram recriados a cada dia de reinício do servidor
+    c.execute(
+        """DELETE FROM eventos WHERE id IN (
+               SELECT e.id FROM eventos e JOIN usuarios u ON u.id = e.usuario_id
+               WHERE u.email LIKE 'demo-%@exemplo.local' AND e.id NOT IN (
+                   SELECT MIN(e2.id) FROM eventos e2 JOIN usuarios u2 ON u2.id = e2.usuario_id
+                   WHERE u2.email LIKE 'demo-%@exemplo.local'
+                   GROUP BY e2.disciplina_id, e2.usuario_id, e2.titulo))"""
+    )
+
+
+# Correções de dados que rodam uma única vez por banco, na ordem. O número
+# aplicado fica em PRAGMA user_version.
+MIGRACOES_DE_DADOS = [
+    _migracao_dados_1,
+]
+
+
 def criar_tabelas() -> None:
     with conectar() as c:
         matriculas_e_nova = not c.execute(
@@ -201,6 +237,11 @@ def criar_tabelas() -> None:
             colunas = {linha["name"] for linha in c.execute(f"PRAGMA table_info({tabela})")}
             if coluna not in colunas:
                 c.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+        versao = c.execute("PRAGMA user_version").fetchone()[0]
+        for numero, migracao in enumerate(MIGRACOES_DE_DADOS, start=1):
+            if numero > versao:
+                migracao(c)
+                c.execute(f"PRAGMA user_version = {numero}")
         if matriculas_e_nova:
             # Quem já tinha conta antes da matrícula por disciplina existir via todas as
             # disciplinas; sem isso perderia acesso ao que já estudava.

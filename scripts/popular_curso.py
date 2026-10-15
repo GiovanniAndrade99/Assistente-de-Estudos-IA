@@ -19,6 +19,7 @@ Uso (na pasta raiz do projeto):
 import argparse
 import html
 import re
+import secrets
 import socket
 import sys
 from datetime import date, timedelta
@@ -31,7 +32,6 @@ from backend.infraestrutura import db, rag
 from .dados_curso_cc import DISCIPLINAS
 
 EMAIL_PADRAO = "professor.cc@exemplo.com"
-SENHA_PADRAO = "professor123"
 
 CSS_PDF = """
 * { font-family: sans-serif; }
@@ -44,10 +44,14 @@ li { margin-bottom: 3pt; }
 """
 
 
-def servidor_rodando(porta: int = 8002) -> bool:
-    with socket.socket() as s:
-        s.settimeout(0.5)
-        return s.connect_ex(("127.0.0.1", porta)) == 0
+def servidor_rodando(portas: tuple[int, ...] = (8000, 8002)) -> int | None:
+    """Porta em que o servidor parece estar rodando, ou None."""
+    for porta in portas:
+        with socket.socket() as s:
+            s.settimeout(0.5)
+            if s.connect_ex(("127.0.0.1", porta)) == 0:
+                return porta
+    return None
 
 
 def obter_professor(email: str, senha: str) -> int:
@@ -56,7 +60,8 @@ def obter_professor(email: str, senha: str) -> int:
         if usuario["tipo"] != "professor":
             sys.exit(f"A conta {email} é de aluno. Informe o e-mail de um professor com --email.")
         return usuario["id"]
-    print(f"Criando a conta de professor {email} (senha: {senha})")
+    print(f"Criando a conta de professor {email}.")
+    print(f"Senha (anote agora, ela não fica salva em texto em lugar nenhum): {senha}")
     return db.executar(
         "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, 'professor')",
         ("Coordenação de Ciência da Computação", email, gerar_hash_senha(senha)),
@@ -125,16 +130,19 @@ def agendar(disciplina_id: int, professor_id: int, d: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--email", default=EMAIL_PADRAO, help="professor dono das disciplinas")
-    parser.add_argument("--senha", default=SENHA_PADRAO, help="senha, caso a conta precise ser criada")
+    parser.add_argument("--senha", help="senha, caso a conta precise ser criada (sem ela, uma aleatória é gerada)")
+    parser.add_argument("--porta", type=int, action="append", help="porta do servidor a conferir (padrão: 8000 e 8002)")
     args = parser.parse_args()
     for saida in (sys.stdout, sys.stderr):  # o console do Windows usa cp1252 por padrão
         saida.reconfigure(encoding="utf-8")
 
-    if servidor_rodando():
-        sys.exit("O servidor está rodando na porta 8002. Pare-o (Ctrl+C) e rode este script de novo.")
+    porta = servidor_rodando(tuple(args.porta) if args.porta else (8000, 8002))
+    if porta:
+        sys.exit(f"O servidor está rodando na porta {porta}. Pare-o (Ctrl+C) e rode este script de novo.")
 
     db.criar_tabelas()
-    professor_id = obter_professor(args.email.strip().lower(), args.senha)
+    senha = args.senha or secrets.token_urlsafe(12)
+    professor_id = obter_professor(args.email.strip().lower(), senha)
     falhas = 0
 
     for d in DISCIPLINAS:

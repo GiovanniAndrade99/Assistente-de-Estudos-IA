@@ -13,6 +13,8 @@ O que antes rodava na importação (criar tabelas, dados de demonstração) fica
 `lifespan`, para os testes montarem a aplicação com um banco temporário sem
 tocar em data/app.db.
 """
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -23,7 +25,7 @@ from .api import (
     auth_router, chat_router, disciplinas_router, documentos_router, estudo_router,
     ia_router, professor_router, progresso_router, saude_router, suporte_router, turma_router,
 )
-from .aplicacao import demo_service
+from .aplicacao import demo_service, retencao_service
 from .excecoes import registrar_handlers
 from .infraestrutura import db
 from .infraestrutura.logging_setup import configurar_logging
@@ -44,11 +46,32 @@ ROUTERS = (
 )
 
 
+logger = logging.getLogger("app")
+
+
+def _conferir_configuracao() -> None:
+    problemas = config.problemas_de_configuracao()
+    if problemas and config.APP_ENV == "production":
+        raise RuntimeError("Configuração incompleta para produção: " + " ".join(problemas))
+    for problema in problemas:
+        logger.warning("configuracao_incompleta", extra={"problema": problema})
+
+
 def _preparar_dados() -> None:
+    config.PASTA_UPLOADS.mkdir(parents=True, exist_ok=True)
     db.criar_tabelas()
     if config.DADOS_DEMO:
         for disciplina in db.consultar("SELECT id FROM disciplinas"):
             demo_service.popular_dados_demo(disciplina["id"])
+
+
+async def _limpeza_periodica() -> None:
+    while True:
+        await asyncio.sleep(config.INTERVALO_LIMPEZA_HORAS * 3600)
+        try:
+            await asyncio.to_thread(retencao_service.executar_limpeza)
+        except Exception:
+            logger.exception("limpeza_falhou")
 
 
 def criar_app(iniciar_tarefas: bool = True) -> FastAPI:
@@ -57,8 +80,17 @@ def criar_app(iniciar_tarefas: bool = True) -> FastAPI:
 
     @asynccontextmanager
     async def ciclo_de_vida(app: FastAPI):
+        _conferir_configuracao()
         _preparar_dados()
-        yield
+        tarefas = []
+        if iniciar_tarefas:
+            await asyncio.to_thread(retencao_service.executar_limpeza)
+            tarefas.append(asyncio.create_task(_limpeza_periodica()))
+        try:
+            yield
+        finally:
+            for tarefa in tarefas:
+                tarefa.cancel()
 
     producao = config.APP_ENV == "production"
     app = FastAPI(

@@ -46,8 +46,9 @@ def cadastrar(dados: Cadastro, request: Request, resposta: Response):
 
 
 @router.post("/login")
-def entrar(dados: Login, resposta: Response):
-    usuario, token, duracao = auth_service.entrar(dados.email, dados.senha)
+def entrar(dados: Login, request: Request, resposta: Response):
+    ip = request.client.host if request.client else "desconhecido"
+    usuario, token, duracao = auth_service.entrar(dados.email, dados.senha, ip)
     _definir_cookie(resposta, token, duracao)
     return usuario
 

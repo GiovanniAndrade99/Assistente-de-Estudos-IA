@@ -7,13 +7,15 @@ hash SHA-256 do token — nunca o valor bruto (ver core/seguranca.py). A sessão
 expira em config.DURACAO_SESSAO_SEGUNDOS, tanto no cookie quanto no banco.
 
 Rate limit: 5 tentativas de login com falha por e-mail em 15 minutos (config)
-bloqueiam novas tentativas com 429 — proteção simples contra força bruta.
-Fica no banco (não em memória) para sobreviver ao `--reload` do uvicorn e
-funcionar igual com múltiplos processos/workers.
+bloqueiam novas tentativas com 429 — proteção simples contra força bruta. Há
+também limites por IP para login e cadastro. E-mail e IP entram no banco só como
+pseudônimos (aplicacao/pseudonimo.py). Fica no banco (não em memória) para
+sobreviver a reinícios e funcionar igual com múltiplos processos.
 """
 import hmac
 import logging
 import re
+import secrets
 import sqlite3
 
 from fastapi import HTTPException
@@ -22,7 +24,7 @@ from .. import config
 from ..core import seguranca
 from ..core.seguranca import conferir_senha, gerar_hash_senha, gerar_token_sessao, hash_token
 from ..infraestrutura import db
-from . import limite_service
+from . import limite_service, pseudonimo
 from . import disciplinas_service
 
 logger = logging.getLogger("auth")
@@ -48,8 +50,8 @@ def _limpar_tentativas_antigas(c) -> None:
 
 def _verificar_rate_limit(email: str) -> None:
     total = db.consultar_um(
-        "SELECT COUNT(*) AS n FROM tentativas_login WHERE email = ? AND criado_em > datetime('now', ?)",
-        (email, f"-{config.JANELA_TENTATIVAS_LOGIN_MINUTOS} minutes"),
+        "SELECT COUNT(*) AS n FROM tentativas_login WHERE chave = ? AND criado_em > datetime('now', ?)",
+        (pseudonimo.chave("email", email), f"-{config.JANELA_TENTATIVAS_LOGIN_MINUTOS} minutes"),
     )["n"]
     if total >= config.LIMITE_TENTATIVAS_LOGIN:
         raise HTTPException(
@@ -61,7 +63,7 @@ def _verificar_rate_limit(email: str) -> None:
 def _registrar_tentativa_falha(email: str) -> None:
     with db.conectar() as c:
         _limpar_tentativas_antigas(c)
-        c.execute("INSERT INTO tentativas_login (email) VALUES (?)", (email,))
+        c.execute("INSERT INTO tentativas_login (chave) VALUES (?)", (pseudonimo.chave("email", email),))
 
 
 # ---------------------------------------------------------------- sessão
@@ -82,7 +84,7 @@ def usuario_da_sessao(token: str | None) -> dict | None:
     return db.consultar_um(
         """SELECT u.id, u.nome, u.email, u.tipo, u.administrador FROM sessoes s
            JOIN usuarios u ON u.id = s.usuario_id
-           WHERE s.token = ? AND (s.expires_at IS NULL OR s.expires_at > CURRENT_TIMESTAMP)""",
+           WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP""",
         (hash_token(token),),
     )
 
@@ -104,8 +106,8 @@ def cadastrar(
     disciplina_ids: list[int] | None = None,
 ) -> tuple[dict, str, int]:
     # Limite por IP (não por e-mail): evita que um script crie muitas contas
-    # trocando de e-mail a cada tentativa.
-    limite_service.limitar(f"ip:{ip}", "cadastro", limite=5, janela_minutos=15)
+    # trocando de e-mail a cada tentativa. O IP entra só como pseudônimo.
+    limite_service.limitar(pseudonimo.chave("ip", ip), "cadastro", config.LIMITE_CADASTROS_POR_IP, 15)
     nome, email = nome.strip(), email.strip().lower()
     if not nome:
         raise HTTPException(400, "Informe seu nome.")
@@ -140,10 +142,25 @@ def cadastrar(
     return {"id": usuario_id, "nome": nome, "email": email, "tipo": tipo, "administrador": 0}, token, duracao
 
 
-def entrar(email: str, senha: str) -> tuple[dict, str, int]:
+_hash_ficticio: str | None = None
+
+
+def _conferir_senha_de_conta_inexistente(senha: str) -> None:
+    """Gasta o mesmo tempo de um login real: sem isso, a resposta mais rápida
+    para e-mail desconhecido revelaria quais e-mails têm conta."""
+    global _hash_ficticio
+    if _hash_ficticio is None:
+        _hash_ficticio = gerar_hash_senha(secrets.token_urlsafe(16))
+    conferir_senha(senha, _hash_ficticio)
+
+
+def entrar(email: str, senha: str, ip: str = "desconhecido") -> tuple[dict, str, int]:
     email = email.strip().lower()
+    limite_service.limitar(pseudonimo.chave("ip", ip), "login", config.LIMITE_LOGINS_POR_IP, 15)
     _verificar_rate_limit(email)
     usuario = db.consultar_um("SELECT * FROM usuarios WHERE email = ?", (email,))
+    if not usuario:
+        _conferir_senha_de_conta_inexistente(senha)
     # Mesma mensagem para e-mail ou senha errados: não revela quais e-mails existem
     if not usuario or not conferir_senha(senha, usuario["senha_hash"]):
         _registrar_tentativa_falha(email)
