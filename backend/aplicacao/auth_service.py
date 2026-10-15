@@ -19,6 +19,7 @@ import sqlite3
 from fastapi import HTTPException
 
 from .. import config
+from ..core import seguranca
 from ..core.seguranca import conferir_senha, gerar_hash_senha, gerar_token_sessao, hash_token
 from ..infraestrutura import db
 from . import limite_service
@@ -146,7 +147,7 @@ def entrar(email: str, senha: str) -> tuple[dict, str, int]:
         logger.info("login_falhou")
         raise HTTPException(401, "E-mail ou senha incorretos.")
     # Atualização gradual de hashes antigos após autenticação válida.
-    if int(usuario["senha_hash"].split("$", 1)[0]) < 600_000:
+    if int(usuario["senha_hash"].split("$", 1)[0]) < seguranca.ITERACOES_SENHA:
         db.executar(
             "UPDATE usuarios SET senha_hash = ? WHERE id = ?",
             (gerar_hash_senha(senha), usuario["id"]),

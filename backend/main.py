@@ -1,14 +1,20 @@
 """API do Assistente de Estudos (FastAPI).
 
 Rodar a partir da pasta raiz do projeto:
-    uvicorn backend.main:app --reload --port 8002
+    uvicorn backend.main:app --port 8002
 e abrir http://localhost:8002
 
 Este arquivo é só a "montagem" da aplicação (app factory): configura logging,
-registra a middleware de observabilidade, inclui os routers e os exception
-handlers, e por último monta o frontend estático. Toda a regra de negócio
-mora em backend/aplicacao/*, e o acesso a dados em backend/infraestrutura/*.
+registra as middlewares, inclui os routers e os exception handlers, e por
+último monta o frontend estático. Toda a regra de negócio mora em
+backend/aplicacao/*, e o acesso a dados em backend/infraestrutura/*.
+
+O que antes rodava na importação (criar tabelas, dados de demonstração) fica no
+`lifespan`, para os testes montarem a aplicação com um banco temporário sem
+tocar em data/app.db.
 """
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -23,16 +29,7 @@ from .infraestrutura import db
 from .infraestrutura.logging_setup import configurar_logging
 from .middlewares.observabilidade import ObservabilidadeMiddleware
 
-configurar_logging(config.LOG_LEVEL)
-db.criar_tabelas()
-for _disciplina in db.consultar("SELECT id FROM disciplinas"):
-    demo_service.popular_dados_demo(_disciplina["id"])
-
-app = FastAPI(title="Assistente de Estudos")
-app.add_middleware(ObservabilidadeMiddleware)
-registrar_handlers(app)
-
-for router in (
+ROUTERS = (
     saude_router.router,
     auth_router.router,
     disciplinas_router.router,
@@ -44,8 +41,44 @@ for router in (
     progresso_router.router,
     suporte_router.router,
     ia_router.router,
-):
-    app.include_router(router)
+)
 
-# O próprio FastAPI serve o frontend (HTML/CSS/JS). Precisa ficar por último.
-app.mount("/", StaticFiles(directory=config.PASTA_FRONTEND, html=True), name="frontend")
+
+def _preparar_dados() -> None:
+    db.criar_tabelas()
+    if config.DADOS_DEMO:
+        for disciplina in db.consultar("SELECT id FROM disciplinas"):
+            demo_service.popular_dados_demo(disciplina["id"])
+
+
+def criar_app(iniciar_tarefas: bool = True) -> FastAPI:
+    """Monta a aplicação. `iniciar_tarefas=False` é usado nos testes: não sobe
+    tarefas de fundo (limpeza periódica, fila de indexação)."""
+
+    @asynccontextmanager
+    async def ciclo_de_vida(app: FastAPI):
+        _preparar_dados()
+        yield
+
+    producao = config.APP_ENV == "production"
+    app = FastAPI(
+        title="Assistente de Estudos",
+        lifespan=ciclo_de_vida,
+        # Documentação automática da API só fora de produção: ela expõe todas as rotas.
+        docs_url=None if producao else "/docs",
+        redoc_url=None if producao else "/redoc",
+        openapi_url=None if producao else "/openapi.json",
+    )
+    app.state.iniciar_tarefas = iniciar_tarefas
+    app.add_middleware(ObservabilidadeMiddleware)
+    registrar_handlers(app)
+    for router in ROUTERS:
+        app.include_router(router)
+
+    # O próprio FastAPI serve o frontend (HTML/CSS/JS). Precisa ficar por último.
+    app.mount("/", StaticFiles(directory=config.PASTA_FRONTEND, html=True), name="frontend")
+    return app
+
+
+configurar_logging(config.LOG_LEVEL)
+app = criar_app()

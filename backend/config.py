@@ -7,10 +7,22 @@ from dotenv import load_dotenv
 RAIZ = Path(__file__).resolve().parent.parent
 load_dotenv(RAIZ / ".env")
 
+
+def _bool(nome: str, padrao: bool) -> bool:
+    valor = os.getenv(nome, "").strip().lower()
+    if not valor:
+        return padrao
+    return valor in ("1", "true", "sim", "yes", "on")
+
+
 # "production" liga cookie seguro (HTTPS) e cabeçalho HSTS; em dev (http://localhost)
 # isso quebraria o teste local, então o padrão é "development".
 APP_ENV = os.getenv("APP_ENV", "development")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
+# Dados fictícios (alunos e mensagens de exemplo) para demonstrar o chat e o calendário.
+# Ligado por padrão só fora de produção: numa turma real eles confundiriam os alunos.
+DADOS_DEMO = _bool("DADOS_DEMO", APP_ENV != "production")
 
 TAMANHO_MAX_UPLOAD_MB = int(os.getenv("TAMANHO_MAX_UPLOAD_MB", "20"))
 DURACAO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
