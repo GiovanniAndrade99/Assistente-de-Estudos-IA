@@ -50,7 +50,12 @@ async function chamarApi(url, opcoes = {}) {
     const trecho = texto.replace(/\s+/g, " ").slice(0, 180);
     throw new Error(`Resposta inválida do servidor (HTTP ${resposta.status}). ${trecho || "Confira se o backend está em execução."}`);
   }
-  if (!resposta.ok) throw new Error(dados.detail || "Erro no servidor");
+  if (!resposta.ok) {
+    const detalhe = Array.isArray(dados.detail)
+      ? dados.detail.map((item) => item.msg).filter(Boolean).join(" ")
+      : dados.detail;
+    throw new Error(detalhe || "Erro no servidor");
+  }
   return dados;
 }
 
@@ -69,6 +74,19 @@ const ENTIDADES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": 
 function escaparHtml(texto) {
   return String(texto).replace(/[&<>"']/g, (c) => ENTIDADES[c]);
 }
+
+// A política de conteúdo (CSP) não aceita o atributo style no HTML. Larguras e atrasos
+// calculados vêm em data-largura / data-atraso e são aplicados aqui via CSSOM, que a
+// CSP permite, para qualquer elemento inserido na página.
+function aplicarEstilosDinamicos(raiz) {
+  for (const el of [raiz, ...raiz.querySelectorAll("[data-largura], [data-atraso]")]) {
+    if (el.dataset.largura !== undefined) el.style.width = `${el.dataset.largura}%`;
+    if (el.dataset.atraso !== undefined) el.style.setProperty("--atraso", el.dataset.atraso);
+  }
+}
+new MutationObserver((mudancas) => {
+  for (const m of mudancas) for (const no of m.addedNodes) if (no.nodeType === 1) aplicarEstilosDinamicos(no);
+}).observe(document.documentElement, { childList: true, subtree: true });
 
 function formatarData(texto) {
   // O SQLite grava em UTC no formato "AAAA-MM-DD HH:MM:SS"
@@ -696,7 +714,7 @@ function htmlNotas(linhas) {
     .map(([aluno, s]) => {
       const pct = Math.round((100 * s.acertos) / s.total);
       return `<tr><td>${escaparHtml(aluno)}</td><td>${s.simulados}</td>
-        <td><div class="barra"><div style="width:${pct}%"></div></div> ${pct}%</td></tr>`;
+        <td><div class="barra"><div data-largura="${pct}"></div></div> ${pct}%</td></tr>`;
     }).join("");
 
   const historico = linhas.map((l) => `

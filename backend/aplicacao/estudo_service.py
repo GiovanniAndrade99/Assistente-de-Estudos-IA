@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from google.genai import types
 
 from .. import prompts
+from ..erros import ErroDeUso
 from ..infraestrutura import db, rag
 from . import limite_service
 from .disciplinas_service import disciplina_ou_404
@@ -41,7 +42,7 @@ def texto_do_documento(disciplina_id: int, arquivo: str) -> tuple[str, bool]:
     """Texto do PDF com marcações [Página N]. Retorna (texto, foi_cortado)."""
     caminho = rag.caminho_do_pdf(disciplina_id, arquivo)
     if not caminho.exists():
-        raise ValueError(f"Arquivo não encontrado: {arquivo}")
+        raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
     texto = "\n\n".join(f"[Página {n}]\n{t}" for n, t in rag.extrair_paginas(caminho))
     if len(texto) > LIMITE_CARACTERES:
         return texto[:LIMITE_CARACTERES], True

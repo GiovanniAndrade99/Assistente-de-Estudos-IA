@@ -5,7 +5,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 RAIZ = Path(__file__).resolve().parent.parent
-load_dotenv(RAIZ / ".env")
+# Os testes definem CARREGAR_DOTENV=0 para não herdar a chave do Gemini e outros
+# valores reais do .env local.
+if os.getenv("CARREGAR_DOTENV", "1") != "0":
+    load_dotenv(RAIZ / ".env")
 
 
 def _bool(nome: str, padrao: bool) -> bool:
@@ -31,6 +34,12 @@ DURACAO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 LIMITE_TENTATIVAS_LOGIN = 5
 JANELA_TENTATIVAS_LOGIN_MINUTOS = 15
 
+# Origens extras aceitas em requisições que alteram dados (separadas por vírgula),
+# para quando o frontend for servido de outro endereço. A própria origem é sempre aceita.
+ORIGENS_PERMITIDAS = [
+    o.strip().rstrip("/") for o in os.getenv("ORIGENS_PERMITIDAS", "").split(",") if o.strip()
+]
+
 # Exigido no cadastro para criar conta de professor (ver .env.example).
 CODIGO_PROFESSOR = os.getenv("CODIGO_PROFESSOR", "")
 
@@ -46,7 +55,8 @@ GEMINI_MODELOS_RESERVA = [
 ]
 TEMPO_LIMITE_SEGUNDOS = 60  # por tentativa
 
-PASTA_DADOS = RAIZ / "data"
+# Onde ficam banco, PDFs e índice. Configurável para rodar uma cópia isolada (testes, avaliação).
+PASTA_DADOS = Path(os.getenv("PASTA_DADOS", str(RAIZ / "data")))
 PASTA_UPLOADS = PASTA_DADOS / "uploads"
 PASTA_INDICE = PASTA_DADOS / "indice"
 PASTA_FRONTEND = RAIZ / "frontend"

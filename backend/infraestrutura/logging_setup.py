@@ -43,3 +43,9 @@ def configurar_logging(nivel: str = "INFO") -> None:
     logging.basicConfig(level=nivel, handlers=[manipulador], force=True)
     # Bibliotecas de terceiros barulhentas em INFO (httpx faz 1 log por chamada ao Gemini)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    # O log de acesso do uvicorn imprime o IP do cliente e a URL com query string.
+    # O nosso (middlewares/observabilidade.py) já registra cada requisição sem isso.
+    acesso_uvicorn = logging.getLogger("uvicorn.access")
+    acesso_uvicorn.handlers.clear()
+    acesso_uvicorn.propagate = False
+    acesso_uvicorn.disabled = True

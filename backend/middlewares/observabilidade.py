@@ -10,8 +10,10 @@ enviado pelo cliente, se houver e for válido; senão um UUID4 novo). Esse id:
 Isso permite rastrear, a partir de um erro relatado pelo usuário, exatamente
 quais logs no servidor correspondem àquela chamada.
 
-Esta mesma middleware também acrescenta cabeçalhos de segurança e grava uma
-linha de log de acesso (método, rota, status, duração) por requisição.
+Esta mesma middleware também acrescenta cabeçalhos de segurança (CSP e outros,
+em seguranca_http.py), recusa requisições que alteram dados vindas de outro site
+e grava uma linha de log de acesso (método, rota, status, duração) por requisição.
+O log de acesso nunca leva IP nem query string.
 """
 import contextvars
 import logging
@@ -20,8 +22,9 @@ import time
 import uuid
 
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
-from .. import config
+from . import seguranca_http
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
 
@@ -48,7 +51,17 @@ class ObservabilidadeMiddleware(BaseHTTPMiddleware):
         inicio = time.perf_counter()
 
         try:
-            resposta = await chamar_proximo(request)
+            # Checagem de origem aqui (e não numa middleware separada): uma middleware
+            # não pode levantar HTTPException, porque fica fora do tratamento de exceções.
+            if (request.method in seguranca_http.METODOS_QUE_ALTERAM
+                    and request.url.path.startswith("/api/")
+                    and not seguranca_http.origem_permitida(request)):
+                resposta = JSONResponse(
+                    {"detail": "Origem da requisição não permitida.", "request_id": request_id},
+                    status_code=403,
+                )
+            else:
+                resposta = await chamar_proximo(request)
         except Exception:
             logger_acesso.info(
                 "requisicao",
@@ -65,13 +78,7 @@ class ObservabilidadeMiddleware(BaseHTTPMiddleware):
 
         duracao_ms = round((time.perf_counter() - inicio) * 1000, 1)
         resposta.headers["X-Request-ID"] = request_id
-        resposta.headers["X-Content-Type-Options"] = "nosniff"
-        resposta.headers["X-Frame-Options"] = "DENY"
-        resposta.headers["Referrer-Policy"] = "same-origin"
-        if request.url.path.startswith("/api/"):
-            resposta.headers["Cache-Control"] = "no-store"
-        if config.APP_ENV == "production":
-            resposta.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        seguranca_http.aplicar_cabecalhos(resposta.headers, request.url.path, resposta.headers.get("content-type"))
 
         logger_acesso.info(
             "requisicao",

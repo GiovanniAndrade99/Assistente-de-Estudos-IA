@@ -4,12 +4,18 @@ Todo teste roda isolado: banco SQLite, uploads e índice vetorial ficam em
 `tmp_path`, a configuração é previsível (não depende do .env local) e o Gemini
 real nunca é chamado — quem precisa de IA usa a fixture `gemini_falso`.
 """
-from types import SimpleNamespace
+import os
 
-import pytest
-from fastapi.testclient import TestClient
+# Antes de qualquer import do backend: o config.py não deve ler o .env real.
+os.environ["CARREGAR_DOTENV"] = "0"
+os.environ["GEMINI_API_KEY"] = ""
 
-from apoio import vetor_do_texto
+from types import SimpleNamespace  # noqa: E402
+
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+
+from apoio import vetor_do_texto  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

@@ -24,5 +24,8 @@ def limitar(chave: str, rota: str, limite: int, janela_minutos: int) -> None:
             (chave, rota, f"-{janela_minutos} minutes"),
         ).fetchone()["n"]
         if total >= limite:
-            raise HTTPException(429, "Muitas requisições. Tente novamente em alguns minutos.")
+            raise HTTPException(
+                429, "Muitas requisições. Tente novamente em alguns minutos.",
+                headers={"Retry-After": str(janela_minutos * 60)},
+            )
         c.execute("INSERT INTO limite_uso (chave, rota) VALUES (?, ?)", (chave, rota))

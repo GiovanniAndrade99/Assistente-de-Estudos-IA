@@ -142,7 +142,7 @@ function medidorCpc(u) {
         <span class="cpc-valor">${u.cpc.toFixed(2)}</span>
         <span class="etiqueta ${cor}">Faixa ${u.faixa}/5</span>
       </div>
-      <div class="cpc-barra" role="img" aria-label="CPC ${u.cpc.toFixed(2)} de 5"><i style="width:${(u.cpc / 5) * 100}%"></i></div>
+      <div class="cpc-barra" role="img" aria-label="CPC ${u.cpc.toFixed(2)} de 5"><i data-largura="${(u.cpc / 5) * 100}"></i></div>
       <span class="cpc-rotulo">CPC contínuo · nota do curso no MEC</span>
     </div>`;
 }
@@ -155,7 +155,7 @@ function cartao(u, indice) {
       <span class="etiqueta ${cor}">${texto}</span></li>`;
   }).join("");
   return `
-    <article class="cartao-parceria glare${u.faixa >= 5 ? " destaque-top" : ""}" style="--atraso:${indice * 70}ms">
+    <article class="cartao-parceria glare${u.faixa >= 5 ? " destaque-top" : ""}" data-atraso="${indice * 70}ms">
       ${u.faixa >= 5 ? `<span class="selo-top">🏆 Top MEC</span>` : ""}
       <header class="parceria-topo">
         <span class="sigla-uni">${escaparHtml(u.sigla)}</span>

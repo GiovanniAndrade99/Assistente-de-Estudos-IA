@@ -21,8 +21,9 @@ for (let i = 0; i < 11; i++) {
 }
 
 // Logos de linguagens de programação girando em órbitas de raios diferentes.
-// Os SVGs vêm do Devicon (projeto de ícones de código aberto) pelo CDN jsDelivr.
-const DEVICON = "https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons";
+// Os SVGs são do Devicon (ícones de código aberto, licença MIT) e ficam no próprio app,
+// em icones/devicon: carregar de um CDN entregaria o IP de cada visitante a terceiros.
+const DEVICON = "icones/devicon";
 // Raios a partir de 235px: com o título + parágrafo atual do painel, órbitas
 // menores que isso cruzam o bloco de texto e os ícones ficam por cima das letras.
 const ICONES = [  // atraso em segundos numa volta de 20 s: define a posição inicial na órbita
@@ -56,9 +57,9 @@ for (const i of ICONES) {
   const angulo = (i.atraso / 20) * 360;
   el.style.cssText = `--tamanho:${i.tamanho}px;--raio:${i.raio};--duracao:20;--atraso:${i.atraso};--angulo:${angulo}deg`;
   const img = document.createElement("img");
-  img.src = `${DEVICON}/${i.arquivo}.svg`;
+  img.src = `${DEVICON}/${i.arquivo.split("/").pop()}.svg`;
   img.alt = i.nome;
-  img.onerror = () => { el.textContent = i.nome; el.classList.add("sem-imagem"); };  // sem internet: mostra o nome
+  img.onerror = () => { el.textContent = i.nome; el.classList.add("sem-imagem"); };  // sem a imagem: mostra o nome
   el.appendChild(img);
   orbitas.appendChild(el);
 }

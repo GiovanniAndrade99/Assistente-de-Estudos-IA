@@ -55,7 +55,7 @@ async function carregarHistoricoSimulados() {
     ${linhas.map((l) => {
       const pct = Math.round((100 * l.acertos) / l.total);
       return `<tr><td>${escaparHtml(l.arquivo)}</td><td>${l.acertos}/${l.total}</td>
-        <td><div class="barra"><div style="width:${pct}%"></div></div> ${pct}%</td>
+        <td><div class="barra"><div data-largura="${pct}"></div></div> ${pct}%</td>
         <td>${formatarData(l.criado_em)}</td></tr>`;
     }).join("")}
     </tbody></table>`;

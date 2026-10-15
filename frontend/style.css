@@ -1235,3 +1235,6 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 
 /* Explicação do CPC (rodapé da aba) centralizada */
 .aviso-fontes { text-align: center; max-width: 760px; margin-left: auto; margin-right: auto; }
+
+/* Sprite de ícones SVG escondido (antes era style= inline, bloqueado pela CSP) */
+.sprite-icones { position: absolute; width: 0; height: 0; overflow: hidden; }

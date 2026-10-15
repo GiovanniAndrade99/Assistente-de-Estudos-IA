@@ -145,7 +145,7 @@ function cartaoDisciplina(d, aulasAbertas) {
         <strong>${pct}%</strong>
       </div>
       <div class="barra-progresso${pct === 100 ? " completa" : ""}" role="progressbar"
-        aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div style="width:${pct}%"></div></div>
+        aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div data-largura="${pct}"></div></div>
       <small>${total ? `${feitas} de ${total} aulas estudadas${pct === 100 ? " · concluída 🎉" : ""}` : "Nenhuma aula enviada ainda"}</small>
     </div>
 

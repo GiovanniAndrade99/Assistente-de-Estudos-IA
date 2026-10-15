@@ -52,7 +52,10 @@ def _verificar_rate_limit(email: str) -> None:
         (email, f"-{config.JANELA_TENTATIVAS_LOGIN_MINUTOS} minutes"),
     )["n"]
     if total >= config.LIMITE_TENTATIVAS_LOGIN:
-        raise HTTPException(429, "Muitas tentativas com senha incorreta. Tente novamente em alguns minutos.")
+        raise HTTPException(
+            429, "Muitas tentativas com senha incorreta. Tente novamente em alguns minutos.",
+            headers={"Retry-After": str(config.JANELA_TENTATIVAS_LOGIN_MINUTOS * 60)},
+        )
 
 
 def _registrar_tentativa_falha(email: str) -> None:
@@ -117,7 +120,7 @@ def cadastrar(
     # pode criar conta desse tipo.
     if tipo == "professor":
         if not config.CODIGO_PROFESSOR:
-            raise HTTPException(500, "Cadastro de professor desativado: CODIGO_PROFESSOR não configurado.")
+            raise HTTPException(503, "O cadastro de professores está desativado neste servidor.")
         if not hmac.compare_digest(codigo_professor.strip(), config.CODIGO_PROFESSOR):
             raise HTTPException(403, "Código de professor incorreto.")
     if db.consultar_um("SELECT id FROM usuarios WHERE email = ?", (email,)):

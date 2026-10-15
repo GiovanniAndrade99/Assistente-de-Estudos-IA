@@ -27,7 +27,7 @@ async function carregarVideos() {
     cartao.innerHTML = `
       ${id
         ? `<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="${escaparHtml(v.titulo)}"
-             loading="lazy" allowfullscreen
+             loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"
              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></div>`
         : `<a class="video link-externo" href="${escaparHtml(v.url)}" target="_blank" rel="noopener">▶ Abrir vídeo</a>`}
       <div class="info">

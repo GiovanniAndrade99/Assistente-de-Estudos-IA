@@ -17,6 +17,7 @@ from google.genai import types
 from google.genai.errors import APIError
 
 from .. import config
+from ..erros import ErroDeUso
 from ..prompts import SISTEMA_CHAT, montar_prompt_chat
 from .vetores import BancoVetorial
 
@@ -31,7 +32,8 @@ def _gemini() -> genai.Client:
     global _cliente_gemini
     if _cliente_gemini is None:
         if not config.GEMINI_API_KEY or config.GEMINI_API_KEY == "cole_sua_chave_aqui":
-            raise RuntimeError("GEMINI_API_KEY não configurada. Veja o arquivo .env.example.")
+            logger.error("gemini_sem_chave")  # o operador vê no log: falta GEMINI_API_KEY no .env
+            raise ErroDeUso("O assistente de IA não está configurado no servidor. Avise o administrador.", 503)
         _cliente_gemini = genai.Client(
             api_key=config.GEMINI_API_KEY,
             http_options=types.HttpOptions(
@@ -72,7 +74,7 @@ def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
         )
     if isinstance(ultimo_erro, APIError):
         raise ultimo_erro
-    raise RuntimeError("O Gemini demorou demais para responder. Tente novamente em instantes.")
+    raise ErroDeUso("O Gemini demorou demais para responder. Tente novamente em instantes.", 504)
 
 
 # ---------------------------------------------------------------- indexação
@@ -138,7 +140,7 @@ def indexar_pdf(disciplina_id: int, arquivo: str) -> int:
         for trecho in dividir_em_trechos(texto_pagina)
     ]
     if not trechos:
-        raise ValueError("Não foi possível extrair texto do PDF (pode ser um PDF escaneado/imagem).")
+        raise ErroDeUso("Não foi possível extrair texto do PDF (pode ser um PDF escaneado/imagem).")
 
     vetores = gerar_embeddings([t["texto"] for t in trechos], "RETRIEVAL_DOCUMENT")
     _banco.adicionar(vetores, trechos)
