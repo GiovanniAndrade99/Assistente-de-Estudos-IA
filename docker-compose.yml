@@ -1,0 +1,16 @@
+# Sobe o app em modo produção (cookie Secure, sem /docs, sem dados de demonstração).
+# Configure o .env antes (veja .env.example). Use HTTPS na frente em uso real.
+services:
+  app:
+    build: .
+    image: assistente-estudos
+    env_file: .env
+    ports:
+      - "8002:8002"
+    volumes:
+      # Volume nomeado: o SQLite se comporta melhor nele do que em pasta compartilhada com o host
+      - dados:/app/data
+    restart: unless-stopped
+
+volumes:
+  dados:

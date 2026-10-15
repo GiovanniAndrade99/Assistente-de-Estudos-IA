@@ -1,0 +1,7 @@
+# Regras conservadoras: só erros de sintaxe e problemas que o Pyflakes acha
+# (import sem uso, nome indefinido, variável não usada). Estilo fica livre.
+target-version = "py311"
+extend-exclude = [".venv", "data", "backups"]
+
+[lint]
+select = ["E9", "F"]
