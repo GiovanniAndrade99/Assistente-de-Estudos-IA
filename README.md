@@ -123,7 +123,7 @@ ruff check .
 python -m pytest -q
 ```
 
-**168 testes** (última execução). Cobrem autenticação, autorização (com teste estrutural de
+**159 testes** (última execução). Cobrem autenticação, autorização (com teste estrutural de
 rotas), privacidade (exportação e exclusão com testes estruturais de tabelas), links de e-mail,
 indexação e OCR, streaming, injeção de prompt, cache e cotas, trilha e SM-2, painel do professor
 e CSV. Usam SQLite temporário e um Gemini falso: nunca chamam a API nem tocam em `data/`.
