@@ -1,0 +1,8 @@
+# Arquivos lidos no Linux (contêiner, CI) ficam sempre com LF
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf
+# Binários: sem conversão de fim de linha
+*.woff2 binary
+*.pdf binary
+*.png binary

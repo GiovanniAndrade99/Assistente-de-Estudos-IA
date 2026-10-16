@@ -103,3 +103,42 @@ Task do asyncio, então não há risco de vazar entre requisições) e também g
 (6 tentativas → 429), limite de tamanho de upload, disciplinas/documentos, chat, turma
 (eventos/atividades/vídeos/mensagens), painel do professor, visão geral/lembretes e o
 handler de erro não tratado — todas passando antes de considerar o refactor concluído.
+
+---
+
+## 16/10: evolução Fase 1 + LGPD + Fase 2
+
+**Feito (branch `evolucao-fase1-lgpd-fase2`, um commit por pacote):** fábrica da aplicação e base de
+testes; CI, lint e Docker; CSP sem `unsafe-inline` e checagem de origem; autorização por participação
+na disciplina; pseudonimização (HMAC), retenção e backup; aviso de privacidade com ciência e
+declaração de 18+; exportação e exclusão de conta; recuperação de senha e confirmação de e-mail;
+simulado corrigido no servidor; métricas sem dado pessoal; indexação em segundo plano com OCR;
+chat em streaming com citação que abre o PDF; defesa contra injeção de prompt e avaliação da IA;
+cache e cotas de uso da IA; trilha até a prova com revisão espaçada; painel do professor v2;
+documentação LGPD.
+
+**Decisões:**
+- **Público 18+:** os termos da API Gemini (vigentes desde 23/03/2026) exigem 18 anos e proíbem apps
+  de acesso provável por menores. A trilha foi reorientada para universitários (prova, ENADE,
+  transferência, segunda graduação) e a aba de universidades virou informativa.
+- **Matrícula livre**, informada no aviso (colegas veem nome e mensagens no chat da turma).
+- **Exclusão de professor:** disciplinas e materiais vão para a conta de sistema "Professor removido".
+
+**Problemas encontrados:**
+1. **Teste estrutural vazio:** no FastAPI 0.141 os routers incluídos viram `_IncludedRouter`, e o teste
+   que deveria conferir a autorização de todas as rotas não via nenhuma (passava sem testar nada).
+   Corrigido percorrendo a tupla `ROUTERS`. *Lição:* teste estrutural precisa conferir que verificou
+   alguma coisa (`assert verificadas > 0`).
+2. **Gemini 503 em todos os modelos ao mesmo tempo** durante a avaliação: a troca de modelo não basta
+   quando o serviço todo está sobrecarregado. O script de avaliação espera e tenta de novo, e conta a
+   indisponibilidade à parte (não é erro de qualidade).
+3. **Pergunta mal formulada na avaliação:** "por que contadores precisam ser inicializados?" — o
+   material só diz *quando*. O modelo respondeu "não encontrei", que é o comportamento certo; a
+   pergunta foi corrigida. *Lição:* conjunto de avaliação também tem bug.
+4. **SDK do Gemini registrava aviso de function calling a cada chamada:** desligado na configuração
+   (o app não usa ferramentas).
+
+**Verificação:** testes automatizados verdes (contagem no README), `ruff` limpo, imagem Docker
+construída, navegação E2E no Chrome (Playwright) por todas as telas sem erro de CSP, fluxo real de
+upload com barra de progresso e pergunta em streaming com o Gemini (o texto chegou em 4 etapas na
+tela e as 8 citações abriram o PDF na página).

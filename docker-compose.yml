@@ -1,16 +1,30 @@
 # Sobe o app em modo produção (cookie Secure, sem /docs, sem dados de demonstração).
-# Configure o .env antes (veja .env.example). Use HTTPS na frente em uso real.
+# Configure o .env antes (veja .env.example). Na internet, ponha um proxy com HTTPS na frente
+# (Caddy, Nginx): a porta fica publicada só nesta máquina.
 services:
   app:
     build: .
     image: assistente-estudos
     env_file: .env
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
     volumes:
-      # Volume nomeado: o SQLite se comporta melhor nele do que em pasta compartilhada com o host
+      # Volumes nomeados: o SQLite se comporta melhor neles do que em pasta compartilhada com o host
       - dados:/app/data
+      - backups:/app/backups
+    # Sistema de arquivos somente leitura: só os volumes e /tmp (OCR) são graváveis
+    read_only: true
+    tmpfs:
+      - /tmp
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    # Um processo só (padrão do uvicorn): a indexação em segundo plano e o índice vetorial
+    # assumem um único worker.
     restart: unless-stopped
 
 volumes:
   dados:
+  backups:

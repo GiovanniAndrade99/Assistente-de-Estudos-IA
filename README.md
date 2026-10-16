@@ -1,208 +1,183 @@
 # Assistente de Estudos com RAG
 
-Aplicação web para apoiar alunos e professores no estudo de materiais em PDF. O sistema usa recuperação de trechos (RAG) e modelos Google Gemini para responder perguntas com referências ao arquivo e à página.
+Aplicação web para estudantes universitários e professores estudarem materiais em PDF. O
+assistente responde com base nos PDFs da disciplina (RAG com Google Gemini), cita arquivo e
+página e abre o PDF na página citada. Público: maiores de 18 anos (exigência dos termos da API
+Gemini).
 
 ## Funcionalidades
 
-- Cadastro e login de alunos e professores; o cadastro de professor exige um código configurado pelo responsável.
-- Catálogo público de disciplinas; alunos podem escolher disciplinas no cadastro ou matricular-se depois. Alunos veem apenas as disciplinas em que estão matriculados.
-- Disciplinas e materiais PDF organizados por turma.
-- Chat com o conteúdo indexado, com citações de arquivo e página e resposta de ausência de informação quando o material não sustenta a pergunta.
-- Resumo, flashcards e simulados gerados a partir de um PDF.
-- Atividades com prazo, entrega do aluno e correção pelo professor responsável.
-- Calendário com eventos da turma, lembretes individuais e prazos.
-- Videoaulas por links do YouTube e chat da turma com atualização periódica.
-- Painel do professor com perguntas e resultados de simulados da disciplina.
-- Visão geral de aulas concluídas, atividades e progresso.
-- Suporte com FAQ e chamados; administradores podem responder chamados.
-- Configurações de perfil, senha, tema e encerramento de outras sessões.
-- Aviso de privacidade e cookies: a aplicação usa cookie de sessão essencial, sem cookies próprios de analytics ou publicidade.
-
-- A tela **Parcerias com universidades** mostra um exemplo de interface com universidades, cursos, notas e vestibulares fictícios. Ela não consulta fontes oficiais nem representa parcerias reais.
+- **Contas:** cadastro de aluno e professor (professor exige `CODIGO_PROFESSOR`), confirmação de
+  e-mail, recuperação de senha, troca de e-mail por link, encerramento de outras sessões.
+- **Disciplinas e materiais:** catálogo, matrícula, envio de PDFs processados em segundo plano com
+  barra de progresso e OCR para PDF escaneado (Tesseract).
+- **Assistente:** chat com resposta em streaming e citações `[n]` que abrem o PDF na página; frase
+  fixa quando o material não cobre a pergunta; resumo, flashcards e simulado corrigido no servidor.
+- **Trilha até a prova:** plano semanal até a data-alvo (prova da disciplina, ENADE, transferência,
+  segunda graduação) e baralho de flashcards com revisão espaçada (SM-2).
+- **Turma:** atividades com entrega e correção, calendário, videoaulas (youtube-nocookie), chat.
+- **Painel do professor:** notas (com exportação CSV), perguntas, temas das dúvidas agrupados sem
+  IA e ranking "o que reforçar" por aula.
+- **Universidades e vestibulares:** aba informativa com cursos de TI, CPC do MEC e datas de
+  inscrição, com fontes (`backend/dados/universidades.json`). Não há parceria formal.
+- **Privacidade (LGPD):** aviso de privacidade com dados da instalação, ciência e declaração de
+  idade no cadastro, exportação e exclusão da conta pelo titular, canal LGPD no Suporte com prazo
+  de 15 dias, retenção automática. Detalhes em `docs/lgpd/`.
+- **Admin:** métricas de uso sem dado pessoal (com consumo de tokens do dia), chamados de suporte,
+  destino de disciplinas de professores que excluíram a conta.
 
 ## Arquitetura
 
-O backend é organizado em camadas:
-
 ```
-Navegador (HTML, CSS, JavaScript)
-    ↓ fetch() / JSON / cookie HttpOnly
-backend/api/             rotas FastAPI e dependências de autorização
-    ↓
-backend/aplicacao/       regras de negócio e limites de uso
-    ↓
-backend/infraestrutura/  SQLite, índice vetorial e integração Gemini
-backend/core/            funções de segurança independentes do framework
+Navegador (HTML, CSS, JS sem frameworks; CSP sem scripts de terceiros)
+    ↓ fetch / JSON / SSE / cookie HttpOnly
+backend/api/             rotas FastAPI e autorização (participação na disciplina)
+backend/aplicacao/       regras de negócio: chat, estudo, trilha, custo, conta, retenção...
+backend/infraestrutura/  SQLite, índice vetorial NumPy, Gemini, e-mail, métricas, logs
+backend/core/            hash de senha e tokens
+backend/middlewares/     request id, cabeçalhos de segurança, checagem de origem
 ```
 
-O pipeline de documentos extrai texto por página, divide em trechos, gera embeddings e os guarda em um índice vetorial próprio baseado em NumPy. No chat, a pergunta também vira embedding; os trechos mais semelhantes são enviados ao Gemini para produzir uma resposta com referências.
+**RAG:** o PDF é lido por página (OCR se a página for imagem), dividido em trechos de 1.000
+caracteres com 200 de sobreposição e transformado em embeddings (`gemini-embedding-001`). O índice
+é um arquivo NumPy único gravado de forma atômica. Na pergunta, os 5 trechos mais parecidos
+(cosseno) vão ao Gemini entre marcações neutralizadas (defesa contra injeção de prompt), e a
+resposta volta em streaming (SSE). Respostas repetidas saem de um cache por disciplina, sem dado de
+quem perguntou.
 
-O SQLite guarda usuários, sessões, disciplinas, documentos, perguntas e respostas, notas, eventos, atividades e entregas, mensagens, chamados e registros de limites de uso. PDFs ficam em data/uploads e os vetores em data/indice.
+## Instalação
 
-A middleware de observabilidade atribui um Request ID, registra método, rota, status e duração em logs JSON e inclui o identificador em respostas. Também define cabeçalhos de segurança. Respostas da API recebem Cache-Control: no-store.
-
-## Rotas principais da API
-
-As rotas de saúde, cadastro, login e logout são públicas. As demais rotas de dados exigem sessão autenticada, com permissões adicionais por função e pela disciplina quando aplicável.
-
-| Grupo | Rotas principais | Uso |
-|---|---|---|
-| Saúde | GET /api/health | Verifica acesso ao banco local |
-| Autenticação | /api/auth/... | Cadastro, login, logout, perfil, troca de senha e sessões |
-| Disciplinas | /api/disciplinas, /api/disciplinas/publico, /api/disciplinas/matricular | Catálogo, listagem conforme papel/matrícula, criação, matrícula e remoção |
-| Materiais | /api/disciplinas/{id}/documentos | Listar, enviar e remover PDFs |
-| Estudo | /api/disciplinas/{id}/chat, /resumo, /flashcards, /simulado | Consultar material e gerar recursos |
-| Turma | /api/disciplinas/{id}/eventos, /atividades, /videos, /mensagens | Calendário, atividades, vídeos e chat |
-| Professor | /api/professor/notas, /api/professor/perguntas | Consultas da disciplina do professor |
-| Progresso | /api/visao-geral, /api/aulas/{id}/concluida, /api/lembretes | Acompanhamento de estudo |
-| Suporte | /api/suporte/chamados | Criar, listar, responder e remover chamados |
-| IA | /api/ia/sobre | Informa provedor, modelos e parâmetros RAG |
-
-## Permissões
-
-| Ação | Aluno | Professor responsável | Administrador |
-|---|:---:|:---:|:---:|
-| Consultar material e usar recursos de estudo | Sim | Sim | Sim |
-| Criar disciplina | Não | Sim | Sim |
-| Enviar/remover PDFs da disciplina | Não | Sim | Sim |
-| Gerenciar atividades, correções e videoaulas da disciplina | Não | Sim | Sim |
-| Entregar atividade e usar chat da turma | Sim | Sim | Sim |
-| Ver painel de notas e perguntas da disciplina | Não | Sim | Sim |
-| Responder chamados | Não | Não | Sim |
-
-A autorização para gerenciar uma disciplina confere se o usuário é o professor que a criou; administradores podem gerenciar todas. O cadastro público de professor só funciona quando CODIGO_PROFESSOR está definido no arquivo .env.
-
-## Segurança implementada
-
-- Senhas derivadas com PBKDF2-HMAC-SHA256, sal individual e 600.000 iterações. Hashes antigos válidos são atualizados após login.
-- Tokens aleatórios de sessão; o banco guarda apenas o hash SHA-256 do token.
-- Cookie de sessão HttpOnly e SameSite=Lax, com validade de até sete dias; Secure é ativado quando APP_ENV=production.
-- Limite de cinco falhas de login por e-mail em 15 minutos e cinco cadastros por IP em 15 minutos.
-- Limites de uso no banco: 20 perguntas ao chat, 15 operações de estudo e 10 uploads por usuário, cada grupo em uma janela de cinco minutos.
-- Upload limitado a TAMANHO_MAX_UPLOAD_MB (20 MB por padrão), apenas PDF, nome saneado e leitura limitada em blocos.
-- Cabeçalhos X-Content-Type-Options, X-Frame-Options e Referrer-Policy; HSTS quando APP_ENV=production.
-- Mensagens de falha de login não registram o e-mail digitado nos logs.
-- Chaves e configuração local ficam em .env, que é ignorado pelo Git.
-
-## Requisitos
-
-- Python 3.11 ou mais recente.
-- Chave de API do Google Gemini para embeddings e geração de conteúdo.
-- Acesso à internet para chamadas ao Gemini, fontes do Google Fonts e recursos externos carregados pela interface.
-
-## Instalação e execução
-
-Na pasta do projeto:
+Requisitos: Python 3.12+ (testado em 3.12 e 3.14), chave da API Gemini e, para OCR, Tesseract com o
+idioma português.
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate.ps1          # Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
-Copy-Item .env.example .env
+Copy-Item .env.example .env         # Linux/macOS: cp .env.example .env
 ```
 
-Edite .env e configure pelo menos GEMINI_API_KEY. Para permitir cadastros de professor, substitua o valor de exemplo de CODIGO_PROFESSOR por um código compartilhado apenas com os professores.
-
-Inicie o servidor:
+Preencha no `.env` pelo menos `GEMINI_API_KEY` e `SEGREDO_APP`. Depois:
 
 ```powershell
-uvicorn backend.main:app --reload --port 8002
+uvicorn backend.main:app --port 8002
+python -m scripts.criar_admin       # conta de administrador (pede nome, e-mail e senha)
 ```
 
-Acesse http://localhost:8002. Para Linux/macOS, a ativação do ambiente virtual é source .venv/bin/activate e a cópia do arquivo é cp .env.example .env.
+Acesse http://localhost:8002. Sem SMTP configurado, os links de e-mail (confirmação e recuperação de
+senha) aparecem no log do servidor em desenvolvimento.
 
-As configurações do Gemini podem ser alteradas no .env:
+### Docker
 
-| Variável | Padrão | Finalidade |
+```powershell
+docker compose up -d --build        # usa o .env; porta 8002 só em 127.0.0.1
+```
+
+A imagem roda como usuário sem privilégios, com Tesseract em português, sistema de arquivos somente
+leitura e volumes para `data/` e `backups/`. Em produção (`APP_ENV=production`, padrão da imagem) o
+servidor não sobe sem `SEGREDO_APP`, `CONTROLADOR_NOME` e `CONTROLADOR_CONTATO`. Use um proxy com
+HTTPS na frente.
+
+## Configuração
+
+Todas as variáveis, com comentários, estão em `.env.example`. As principais:
+
+| Variável | Padrão | Para quê |
 |---|---|---|
-| GEMINI_API_KEY | vazio | Chave de acesso ao Gemini |
-| GEMINI_MODEL | gemini-3.6-flash | Modelo principal de geração |
-| GEMINI_MODELS_FALLBACK | gemini-3.5-flash,gemini-3.1-flash-lite | Modelos tentados como reserva |
-| GEMINI_EMBED_MODEL | gemini-embedding-001 | Modelo de embeddings |
-| APP_ENV | development | Em production ativa Secure no cookie e HSTS |
-| LOG_LEVEL | INFO | Nível dos logs |
-| TAMANHO_MAX_UPLOAD_MB | 20 | Limite do PDF enviado |
+| `APP_ENV` | development | `production`: cookie Secure, HSTS, sem `/docs`, sem dados demo |
+| `GEMINI_API_KEY` | — | Chave da API Gemini |
+| `GEMINI_MODEL` / `GEMINI_MODELS_FALLBACK` | gemini-3.6-flash / 3.5-flash, 3.1-flash-lite | Modelo principal e reservas (429, 5xx, tempo esgotado) |
+| `GEMINI_PLANO_PAGO` | false | Informa no aviso de privacidade se o plano pago (com DPA) está ativo |
+| `SEGREDO_APP` | — | Segredo do HMAC de IP/e-mail no controle de tentativas |
+| `CODIGO_PROFESSOR` | — | Código do cadastro de professor; vazio desativa esse cadastro |
+| `CONTROLADOR_*`, `ENCARREGADO_*` | — | Quem trata os dados e o encarregado (aviso de privacidade) |
+| `COTA_IA_DIA_ALUNO` / `_PROFESSOR` | 60 / 200 | Pedidos ao Gemini por pessoa em 24 h |
+| `CACHE_RESPOSTAS_DIAS` | 7 | Validade do cache de respostas |
+| `ALERTA_TOKENS_DIA` / `TETO_TOKENS_DIA` | 0 | Alerta e teto diário de tokens do sistema |
+| `RETENCAO_*` | 12 meses, backup 30 dias | Prazos da limpeza automática |
+| `SMTP_*`, `APP_URL_BASE` | — | Envio de e-mails de conta e endereço dos links |
+| `OCR_HABILITADO`, `OCR_IDIOMAS` | true, por+eng | Leitura de PDF escaneado |
 
-O nome e a disponibilidade dos modelos dependem do provedor e da conta configurada. Se uma chamada falhar, confira os modelos disponíveis e atualize os valores no .env.
+## Rotas da API
 
-## Testes automatizados
+Públicas: saúde, cadastro, login, recuperação de senha e aviso de privacidade. As demais exigem
+sessão e, nas rotas `/api/disciplinas/{id}/...`, participação na disciplina.
 
-Instale as dependências de desenvolvimento e execute a suíte na raiz do projeto:
+| Grupo | Rotas principais |
+|---|---|
+| Conta | `/api/auth/...`, `/api/conta/meus-dados`, `/api/conta/email`, `DELETE /api/conta`, `/api/conta/ciencia-privacidade` |
+| Disciplinas | `/api/disciplinas`, `/publico`, `/matricular` |
+| Materiais | `/api/disciplinas/{id}/documentos` (envio responde 202), `/documentos/{doc}/arquivo` (PDF) |
+| Assistente | `/chat`, `/chat/stream` (SSE), `/resumo`, `/flashcards`, `/simulado`, `/simulados/{id}/respostas` |
+| Trilha | `/trilha`, `/baralho`, `/baralho/hoje`, `/api/baralho/{id}/revisao`, `/api/universidades` |
+| Turma | `/eventos`, `/atividades`, `/videos`, `/mensagens` |
+| Professor | `/api/professor/notas`, `/notas.csv`, `/perguntas`, `/temas`, `/reforcar` |
+| Admin | `/api/admin/metricas`, `/api/admin/disciplinas-sem-professor` |
+| Outros | `/api/visao-geral`, `/api/lembretes`, `/api/suporte/...`, `/api/privacidade`, `/api/ia/sobre`, `/api/health` |
+
+## Testes e qualidade
 
 ```powershell
 pip install -r requirements-dev.txt
+ruff check .
 python -m pytest -q
 ```
 
-Os testes cobrem hashing de senhas e tokens, cadastro/login/logout, migração de hash antigo, bloqueio de tentativas, autorização de professor, matrícula em disciplinas, Request ID e cabeçalhos de resposta. Eles usam um SQLite temporário e não chamam o Gemini nem alteram os dados em data/.
+**168 testes** (última execução). Cobrem autenticação, autorização (com teste estrutural de
+rotas), privacidade (exportação e exclusão com testes estruturais de tabelas), links de e-mail,
+indexação e OCR, streaming, injeção de prompt, cache e cotas, trilha e SM-2, painel do professor
+e CSV. Usam SQLite temporário e um Gemini falso: nunca chamam a API nem tocam em `data/`.
 
-Última execução nesta versão: **11 passaram**. Foram exibidos dois avisos de depreciação nas dependências; eles não afetaram o resultado.
+O CI (`.github/workflows/ci.yml`) roda lint e testes em Python 3.12 e 3.14 e constrói a imagem
+Docker a cada push e pull request.
 
-## Criar administrador
+### Avaliação da IA
 
-Com o ambiente virtual ativado, execute na pasta raiz:
+`python -m scripts.avaliar_ia` monta a disciplina demo "Algoritmos e Programação" numa pasta
+temporária, indexa os PDFs (mais um PDF com instrução escondida) e faz 45 perguntas do conjunto
+`avaliacao/conjunto_algoritmos.json`: no material, fora do material e tentativas de injeção. Sai com
+erro se o acerto ficar abaixo de `--meta` (0,9). Usa o Gemini real (só conteúdo demo, sem dado
+pessoal). No GitHub, o workflow manual "Avaliação da IA" faz o mesmo com o segredo `GEMINI_API_KEY`.
+Resultados registrados em `docs/prompts.md`.
 
-```powershell
-python -m scripts.criar_admin
+## Operação
+
+| Tarefa | Comando |
+|---|---|
+| Backup (banco, PDFs, índice; rotação de 30 dias) | `python -m scripts.backup` |
+| Restaurar (servidor parado) | `python -m scripts.restaurar_backup backups/<pasta> --confirmar` |
+| Aplicar a retenção agora | `python -m scripts.limpeza` |
+| Curso demo de Ciência da Computação | `python -m scripts.popular_curso` (servidor parado; gera senha aleatória se faltar `--senha`) |
+| Criar administrador | `python -m scripts.criar_admin` |
+
+## Estrutura
+
 ```
-
-O script solicita nome, e-mail e senha no terminal, sem exibir a senha digitada.
-
-## Dados de demonstração
-
-Para criar o curso de Ciência da Computação com disciplinas, PDFs, eventos e atividades, pare o servidor e execute:
-
-```powershell
-python -m scripts.popular_curso
+backend/        API, regras de negócio, infraestrutura, prompts, dados das universidades
+frontend/       páginas, estilos, scripts, fontes e ícones locais
+scripts/        admin, backup, restauração, limpeza, curso demo, avaliação da IA
+avaliacao/      conjunto de perguntas e métricas da avaliação da IA
+tests/          testes automatizados
+docs/           diário, prompts, privacidade e segurança, docs/lgpd/
+data/           banco, PDFs e índice (gerado localmente, fora do Git)
 ```
-
-O processo usa a API do Gemini para indexar os PDFs, portanto depende de uma chave válida e de cota disponível. Pode ser retomado: itens já criados são ignorados. Por padrão, se ainda não existir a conta de demonstração, o script cria professor.cc@exemplo.com com a senha professor123. Essa credencial é somente para demonstração local; use --email para associar os dados a uma conta de professor existente e nunca reutilize a senha padrão.
-
-## Estrutura do repositório
-
-```
-backend/
-  prompts.py           instruções usadas pelo modelo
-  api/                 rotas e autorização
-  aplicacao/           regras de negócio e limites
-  core/                hashing de senha e tokens
-  infraestrutura/      SQLite, RAG, vetores e logs
-  middlewares/          observabilidade e cabeçalhos
-  main.py              montagem da aplicação
-frontend/               telas, estilos e JavaScript
-  parcerias.js           conteúdo demonstrativo, explicitamente fictício
-scripts/                criação de administrador e dados de demonstração
-docs/                   diário, prompts e privacidade/segurança
-exemplos/               PDF de demonstração
-data/                   banco, PDFs e índice vetorial (gerados localmente)
-.env.example             exemplo de configuração
-requirements.txt         dependências Python
-```
-
-## Parâmetros do RAG
-
-Os parâmetros ficam em backend/config.py:
-
-| Parâmetro | Padrão | Efeito |
-|---|---:|---|
-| TAMANHO_TRECHO | 1000 caracteres | Tamanho aproximado de cada trecho |
-| SOBREPOSICAO | 200 caracteres | Contexto repetido entre trechos vizinhos |
-| TOP_K | 5 | Número de trechos recuperados para responder |
-
-Resumo, flashcards e simulados usam o texto extraído do PDF, limitado a 200.000 caracteres. O chat usa recuperação de trechos por similaridade de cosseno.
 
 ## Limitações conhecidas
 
-- A área de parcerias contém universidades, notas MEC e datas de vestibular fictícias, apenas para demonstrar a interface; não há integração com universidades nem consulta a dados oficiais.
-- PDFs escaneados sem camada de texto não são processados; o sistema não tem OCR.
-- Os resultados de simulados enviados ao histórico não são uma avaliação segura: o cliente informa a pontuação. Use-os como acompanhamento informal, não como nota oficial.
-- Resumo, flashcards e simulados podem usar apenas o início de documentos acima do limite de texto.
-- A disponibilidade, latência, limites e nomes de modelos Gemini podem mudar; chamadas dependem de internet e da cota da conta.
-- O aviso de privacidade descreve o comportamento técnico atual. Informações do controlador, canal de contato, retenção e processos de atendimento a titulares precisam ser definidos pelo responsável antes de uso público. Consulte docs/privacidade-e-seguranca.md.
-- Os testes automatizados cobrem fluxos de autenticação, autorização e matrícula. O pipeline de qualidade das respostas do Gemini ainda depende de avaliação manual com PDFs e perguntas de referência.
+- O plano gratuito da API Gemini permite ao Google usar o conteúdo enviado para melhorar produtos;
+  para alunos reais, ative o plano pago e marque `GEMINI_PLANO_PAGO=true`.
+- A idade mínima é declarada, não verificada.
+- A matrícula nas disciplinas é livre: qualquer pessoa com conta pode entrar numa turma e ver o chat.
+- OCR depende da qualidade da imagem; resumo, flashcards e simulado usam no máximo 200 mil
+  caracteres do documento.
+- Um único processo do servidor (o índice vetorial e a fila de indexação assumem um worker).
+- Nomes, cotas e disponibilidade dos modelos Gemini mudam; ajuste no `.env`.
+- Itens jurídicos e operacionais estão em `docs/lgpd/pendencias-do-controlador.md`.
 
-## Documentação de apoio
+## Documentação
 
-- docs/diario-desenvolvimento.md: decisões, problemas encontrados e verificações.
-- docs/prompts.md: prompts usados e justificativas.
-- docs/privacidade-e-seguranca.md: controles existentes e providências operacionais de privacidade.
+- `docs/diario-desenvolvimento.md`: decisões, problemas e verificações.
+- `docs/prompts.md`: prompts, versões e resultados da avaliação.
+- `docs/privacidade-e-seguranca.md`: controles técnicos.
+- `docs/lgpd/`: registro das operações, atendimento ao titular, resposta a incidentes, legítimo
+  interesse, RIPD simplificado e pendências do controlador.
