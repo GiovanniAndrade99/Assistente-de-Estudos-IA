@@ -59,3 +59,9 @@ def participante_da_disciplina(disciplina_id: int, usuario: dict = Depends(usuar
     if not participacao_service.participa(usuario, disciplina):
         raise HTTPException(403, "Você não participa desta disciplina.")
     return usuario
+
+
+def somente_admin(usuario: dict = Depends(usuario_atual)) -> dict:
+    if not usuario.get("administrador"):
+        raise HTTPException(403, "Área restrita a administradores.")
+    return usuario

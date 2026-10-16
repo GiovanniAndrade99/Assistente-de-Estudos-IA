@@ -258,3 +258,6 @@ formCadastrar.addEventListener("submit", (e) => {
 
 // login.html#cadastrar abre direto no cadastro
 mostrarForm(location.hash === "#cadastrar" ? "criar" : "entrar");
+if (location.hash === "#conta-excluida") {
+  formEntrar.querySelector(".erro-geral").textContent = "Sua conta e seus dados foram excluídos.";
+}

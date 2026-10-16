@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .api import (
-    auth_router, chat_router, conta_router, disciplinas_router, documentos_router, estudo_router,
+    admin_router, auth_router, chat_router, conta_router, disciplinas_router, documentos_router, estudo_router,
     ia_router, privacidade_router, professor_router, progresso_router, saude_router, suporte_router,
     turma_router,
 )
@@ -46,6 +46,7 @@ ROUTERS = (
     ia_router.router,
     privacidade_router.router,
     conta_router.router,
+    admin_router.router,
 )
 
 

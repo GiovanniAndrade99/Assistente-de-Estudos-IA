@@ -11,6 +11,7 @@ TELAS.config = {
     const tema = document.documentElement.dataset.tema || "claro";
     for (const radio of document.querySelectorAll("input[name=tema]")) radio.checked = radio.value === tema;
     for (const status of document.querySelectorAll("#tela-config .status")) status.textContent = "";
+    if (usuario.administrador) carregarSemProfessor();
   },
 };
 
@@ -64,3 +65,52 @@ $("botao-encerrar-sessoes").onclick = async () => {
 };
 
 $("abrir-aviso-cookies").onclick = () => window.mostrarAvisoCookies?.();
+
+// ---------------------------------------------------------- seus dados (LGPD)
+
+$("form-excluir-conta").addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  const form = evento.target;
+  const { senha, confirmacao } = dadosDoForm(form);
+  try {
+    await excluirConta(senha, confirmacao);
+  } catch (erro) {
+    form.querySelector(".status").textContent = `✖ ${erro.message}`;
+  }
+});
+
+// ---------------------------------------------------------- admin: disciplinas sem professor
+
+async function carregarSemProfessor() {
+  const lista = $("lista-sem-professor");
+  const disciplinas = await chamarApi("/api/admin/disciplinas-sem-professor");
+  if (!disciplinas.length) {
+    lista.innerHTML = `<li class="dica">Nenhuma no momento.</li>`;
+    return;
+  }
+  lista.innerHTML = "";
+  for (const d of disciplinas) {
+    const item = document.createElement("li");
+    item.innerHTML = `
+      <span><strong>${escaparHtml(d.nome)}</strong> · ${d.alunos} aluno(s)</span>
+      <form class="linha-transferir">
+        <input type="email" name="email_professor" placeholder="e-mail do novo professor" required maxlength="254">
+        <button type="submit" class="botao-secundario">Transferir</button>
+      </form>`;
+    item.querySelector("form").onsubmit = async (evento) => {
+      evento.preventDefault();
+      try {
+        const r = await chamarApi(`/api/admin/disciplinas/${d.id}/professor`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(dadosDoForm(evento.target)),
+        });
+        $("status-sem-professor").textContent = `✔ ${d.nome} agora é de ${r.professor}.`;
+        carregarSemProfessor();
+      } catch (erro) {
+        $("status-sem-professor").textContent = `✖ ${erro.message}`;
+      }
+    };
+    lista.appendChild(item);
+  }
+}

@@ -10,16 +10,26 @@ from ..infraestrutura import db
 
 logger = logging.getLogger("suporte")
 
-CATEGORIAS = ("Dúvida de uso", "Problema técnico", "Assistente IA", "Conta e acesso", "Sugestão")
+# Pedidos de titulares (LGPD, art. 18) têm prazo de resposta de 15 dias (art. 19, II)
+CATEGORIA_LGPD = "Privacidade e dados pessoais (LGPD)"
+PRAZO_LGPD_DIAS = 15
+CATEGORIAS = ("Dúvida de uso", "Problema técnico", "Assistente IA", "Conta e acesso", CATEGORIA_LGPD, "Sugestão")
 
 
 def listar_chamados(usuario: dict) -> list[dict]:
-    sql = """SELECT c.*, u.nome AS autor, u.email AS email_autor
-             FROM chamados_suporte c JOIN usuarios u ON u.id = c.usuario_id"""
+    sql = f"""SELECT c.*, u.nome AS autor, u.email AS email_autor,
+                     CASE WHEN c.categoria = ? THEN date(c.criado_em, '+{PRAZO_LGPD_DIAS} days') END AS prazo_resposta,
+                     (c.categoria = ? AND c.resposta IS NULL
+                      AND datetime(c.criado_em, '+{PRAZO_LGPD_DIAS} days') < CURRENT_TIMESTAMP) AS prazo_vencido
+              FROM chamados_suporte c JOIN usuarios u ON u.id = c.usuario_id"""
+    parametros = (CATEGORIA_LGPD, CATEGORIA_LGPD)
     if usuario.get("administrador"):
-        # Os ainda sem resposta primeiro
-        return db.consultar(sql + " ORDER BY c.resposta IS NOT NULL, c.criado_em DESC LIMIT 200")
-    return db.consultar(sql + " WHERE c.usuario_id = ? ORDER BY c.criado_em DESC", (usuario["id"],))
+        # Sem resposta primeiro; entre eles, os pedidos LGPD (têm prazo legal)
+        return db.consultar(
+            sql + " ORDER BY c.resposta IS NOT NULL, c.categoria = ? DESC, c.criado_em DESC LIMIT 200",
+            (*parametros, CATEGORIA_LGPD),
+        )
+    return db.consultar(sql + " WHERE c.usuario_id = ? ORDER BY c.criado_em DESC", (*parametros, usuario["id"]))
 
 
 def abrir_chamado(usuario: dict, categoria: str, assunto: str, mensagem: str) -> int:

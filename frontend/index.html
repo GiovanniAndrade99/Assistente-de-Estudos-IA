@@ -482,11 +482,12 @@
         <div class="linha-campos">
           <label>Assunto <input type="text" name="assunto" required maxlength="150" placeholder="Ex.: Erro ao enviar PDF"></label>
           <label>Categoria
-            <select name="categoria">
+            <select name="categoria" id="categoria-chamado">
               <option>Dúvida de uso</option>
               <option>Problema técnico</option>
               <option>Assistente IA</option>
               <option>Conta e acesso</option>
+              <option>Privacidade e dados pessoais (LGPD)</option>
               <option>Sugestão</option>
             </select>
           </label>
@@ -555,6 +556,30 @@
           <a href="/privacidade.html">Abrir aviso de privacidade</a><br>
           <button type="button" id="abrir-aviso-cookies" class="botao-secundario">Rever aviso de cookies</button>
         </div>
+
+        <div class="cartao-form cartao-seus-dados">
+          <h3>Seus dados</h3>
+          <p class="dica">Baixe tudo o que o sistema guarda sobre você, num arquivo JSON, ou exclua sua conta.
+            Outros pedidos: Suporte, categoria "Privacidade e dados pessoais (LGPD)".</p>
+          <a class="botao-secundario" href="/api/conta/meus-dados" download>Baixar meus dados</a>
+          <form id="form-excluir-conta" class="form-excluir-conta">
+            <h4>Excluir minha conta</h4>
+            <p class="dica">Apaga sua conta, perguntas, notas, mensagens, entregas e lembretes. Disciplinas que você
+              criou continuam para os alunos, sem o seu nome. Não dá para desfazer.</p>
+            <label>Sua senha <input type="password" name="senha" autocomplete="current-password" required maxlength="128"></label>
+            <label>Digite EXCLUIR para confirmar <input type="text" name="confirmacao" autocomplete="off" required maxlength="20"></label>
+            <button type="submit" class="botao-perigo">Excluir minha conta</button>
+            <p class="status" role="status"></p>
+          </form>
+        </div>
+
+        <div class="cartao-form" data-so-admin hidden>
+          <h3>Disciplinas sem professor</h3>
+          <p class="dica">Ficaram de professores que excluíram a conta. Transfira para outro professor ou remova a
+            disciplina pelo menu lateral.</p>
+          <ul id="lista-sem-professor" class="lista-sem-professor"></ul>
+          <p class="status" id="status-sem-professor" role="status"></p>
+        </div>
       </div>
     </main>
   </div>
@@ -582,8 +607,13 @@
           o uso por menores. Você pode baixar seus dados e excluir a conta agora.</p>
         <div class="linha-botoes">
           <a class="botao-secundario" href="/api/conta/meus-dados" download>Baixar meus dados</a>
-          <button type="button" id="botao-excluir-menor" class="botao-perigo" hidden>Excluir minha conta</button>
+          <button type="button" id="botao-excluir-menor" class="botao-perigo">Excluir minha conta</button>
           <button type="button" id="botao-sair-menor" class="botao-secundario">Sair</button>
+        </div>
+        <div id="excluir-menor" class="excluir-menor" hidden>
+          <label>Sua senha <input type="password" id="senha-excluir-menor" autocomplete="current-password" maxlength="128"></label>
+          <button type="button" id="confirmar-excluir-menor" class="botao-perigo">Confirmar exclusão</button>
+          <p class="status" role="status"></p>
         </div>
       </div>
     </form>

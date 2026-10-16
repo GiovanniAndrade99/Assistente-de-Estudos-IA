@@ -134,3 +134,9 @@ def listar_mensagens(disciplina_id: int, depois: int = 0, usuario: dict = Depend
 def enviar_mensagem(disciplina_id: int, dados: NovaMensagem, usuario: dict = Depends(usuario_atual)):
     novo_id = turma_service.enviar_mensagem(disciplina_id, usuario["id"], dados.texto)
     return {"id": novo_id}
+
+
+@router.delete("/mensagens/{mensagem_id}")
+def remover_mensagem(disciplina_id: int, mensagem_id: int, usuario: dict = Depends(usuario_atual)):
+    turma_service.remover_mensagem(disciplina_id, mensagem_id, usuario)
+    return {"ok": True}

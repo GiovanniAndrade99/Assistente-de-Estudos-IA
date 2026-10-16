@@ -117,10 +117,10 @@ def _chamadas(dependant):
 
 def test_toda_rota_por_disciplina_confere_participacao():
     """Estrutural: uma rota nova com {disciplina_id} (ou ?disciplina_id=) sem a checagem quebra este teste."""
-    from backend.api.dependencias import participante_da_disciplina, professor_da_disciplina
+    from backend.api.dependencias import participante_da_disciplina, professor_da_disciplina, somente_admin
     from backend.main import ROUTERS
 
-    protegidas = {participante_da_disciplina, professor_da_disciplina}
+    protegidas = {participante_da_disciplina, professor_da_disciplina, somente_admin}
     verificadas, sem_checagem = 0, []
     # Percorre os routers (o FastAPI recente não achata as rotas incluídas em app.routes)
     for router in ROUTERS:

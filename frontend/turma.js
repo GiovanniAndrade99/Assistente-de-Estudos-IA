@@ -61,6 +61,24 @@ function elementoMensagem(m) {
     ${minha ? "" : `<div class="autor">${escaparHtml(m.autor)}${m.tipo === "professor" ? ` <span class="selo professor">Professor</span>` : ""}${m.demonstracao ? ` <span class="selo-exemplo">Exemplo</span>` : ""}</div>`}
     <div class="texto">${escaparHtml(m.texto)}</div>
     <div class="hora">${formatarData(m.criado_em)}</div>`;
+  const podeApagar = minha || usuario.administrador || disciplinaAtual.criado_por === usuario.id;
+  if (podeApagar) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "apagar-msg";
+    botao.textContent = "Apagar";
+    botao.setAttribute("aria-label", "Apagar mensagem");
+    botao.onclick = async () => {
+      if (!confirm("Apagar esta mensagem?")) return;
+      try {
+        await chamarApi(rotaDisciplina(`/mensagens/${m.id}`), { method: "DELETE" });
+        div.remove();
+      } catch (erro) {
+        alert(erro.message);
+      }
+    };
+    div.querySelector(".hora").appendChild(botao);
+  }
   return div;
 }
 

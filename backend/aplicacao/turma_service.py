@@ -181,6 +181,21 @@ def listar_mensagens(disciplina_id: int, depois: int) -> list[dict]:
     return linhas[::-1]  # mais antigas primeiro
 
 
+def remover_mensagem(disciplina_id: int, mensagem_id: int, usuario: dict) -> None:
+    """Quem escreveu apaga a própria mensagem (LGPD, art. 18, VI); o professor dono e o
+    admin também podem, para moderar o chat."""
+    mensagem = db.consultar_um(
+        """SELECT m.usuario_id, d.criado_por FROM mensagens_turma m JOIN disciplinas d ON d.id = m.disciplina_id
+           WHERE m.id = ? AND m.disciplina_id = ?""",
+        (mensagem_id, disciplina_id),
+    )
+    if not mensagem:
+        raise HTTPException(404, "Mensagem não encontrada.")
+    if usuario["id"] not in (mensagem["usuario_id"], mensagem["criado_por"]) and not usuario.get("administrador"):
+        raise HTTPException(403, "Você só pode apagar as suas mensagens.")
+    db.executar("DELETE FROM mensagens_turma WHERE id = ?", (mensagem_id,))
+
+
 def enviar_mensagem(disciplina_id: int, usuario_id: int, texto: str) -> int:
     return db.executar(
         "INSERT INTO mensagens_turma (disciplina_id, usuario_id, texto) VALUES (?, ?, ?)",

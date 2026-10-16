@@ -18,6 +18,12 @@ class Resposta(BaseModel):
     resposta: str = Field(max_length=5000)
 
 
+@router.get("/categorias")
+def categorias(usuario: dict = Depends(usuario_atual)):
+    return {"categorias": list(suporte_service.CATEGORIAS), "categoria_lgpd": suporte_service.CATEGORIA_LGPD,
+            "prazo_lgpd_dias": suporte_service.PRAZO_LGPD_DIAS}
+
+
 @router.get("/chamados")
 def listar_chamados(usuario: dict = Depends(usuario_atual)):
     return suporte_service.listar_chamados(usuario)

@@ -22,6 +22,8 @@ const PERGUNTAS_FREQUENTES = [
     "Sim. O Painel da turma mostra as perguntas dos alunos para o professor acompanhar as dúvidas da turma. Não escreva dados pessoais nas perguntas."],
   ["Como troco minha senha ou o tema?",
     "Clique no seu nome no canto inferior da barra lateral para abrir as Configurações. Lá dá para mudar nome, senha, tema claro/escuro e encerrar sessões em outros dispositivos."],
+  ["Como baixo ou apago meus dados?",
+    "Em Configurações › Seus dados você baixa tudo o que o sistema guarda sobre você (arquivo JSON) e pode excluir a conta. Para outros pedidos sobre seus dados, abra um chamado na categoria \"Privacidade e dados pessoais (LGPD)\": a resposta vem em até 15 dias."],
 ];
 
 $("faq").innerHTML = PERGUNTAS_FREQUENTES.map(([pergunta, resposta]) => `
@@ -50,9 +52,22 @@ TELAS.suporte = {
     const admin = Boolean(usuario.administrador);
     $("titulo-chamados").textContent = admin ? "Chamados dos usuários" : "Meus chamados";
     formChamado.querySelector(".status").textContent = "";
+    carregarCategorias();
     carregarChamados();
   },
 };
+
+// As categorias vêm do servidor (a lista do HTML é só o valor inicial)
+async function carregarCategorias() {
+  try {
+    const { categorias } = await chamarApi("/api/suporte/categorias");
+    const select = $("categoria-chamado");
+    const atual = select.value;
+    select.replaceChildren(...categorias.map((c) => new Option(c, c, false, c === atual)));
+  } catch {
+    // mantém as opções do HTML
+  }
+}
 
 async function carregarChamados() {
   try {
@@ -67,9 +82,16 @@ async function carregarChamados() {
 
 function htmlChamado(c) {
   const admin = Boolean(usuario.administrador);
-  const situacao = c.resposta
+  let situacao = c.resposta
     ? `<span class="etiqueta verde">Respondido</span>`
     : `<span class="etiqueta laranja">Aguardando resposta</span>`;
+  // Pedido de titular (LGPD): prazo legal de resposta
+  if (c.prazo_resposta && !c.resposta) {
+    const prazo = new Date(`${c.prazo_resposta}T00:00:00`).toLocaleDateString("pt-BR");
+    situacao += c.prazo_vencido
+      ? ` <span class="etiqueta vermelha">Prazo LGPD vencido (${prazo})</span>`
+      : ` <span class="etiqueta azul">Responder até ${prazo}</span>`;
+  }
   const autor = admin ? `${escaparHtml(c.autor)} (${escaparHtml(c.email_autor)}) · ` : "";
   const resposta = c.resposta
     ? `<div class="resposta-suporte"><strong>Resposta do suporte</strong> · ${formatarData(c.respondido_em)}

@@ -214,6 +214,15 @@ function atualizarAreasDaDisciplina() {
 
 // ---------------------------------------------------------- usuário
 
+async function excluirConta(senha, confirmacao) {
+  await chamarApi("/api/conta", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ senha, confirmacao }),
+  });
+  location.href = "/login.html#conta-excluida";
+}
+
 // Contas antigas (ou aviso de privacidade atualizado): pede a ciência do aviso e a
 // declaração de idade mínima antes de carregar qualquer dado das disciplinas.
 function pedirCiencia() {
@@ -221,6 +230,15 @@ function pedirCiencia() {
   const form = $("form-ciencia");
   const status = form.querySelector(".status");
   $("botao-menor-18").onclick = () => { $("texto-menor-18").hidden = false; };
+  $("botao-excluir-menor").onclick = () => { $("excluir-menor").hidden = false; $("senha-excluir-menor").focus(); };
+  $("confirmar-excluir-menor").onclick = async () => {
+    const status = $("excluir-menor").querySelector(".status");
+    try {
+      await excluirConta($("senha-excluir-menor").value, "EXCLUIR");
+    } catch (erro) {
+      status.textContent = `✖ ${erro.message}`;
+    }
+  };
   $("botao-sair-menor").onclick = async () => {
     await postarJson("/api/auth/logout", {});
     location.href = "/login.html";
@@ -254,6 +272,7 @@ async function iniciar() {
   mostrarUsuario();
   $("tipo-usuario").classList.add(usuario.tipo);
   for (const el of document.querySelectorAll("[data-so-professor]")) el.hidden = usuario.tipo !== "professor" && !usuario.administrador;
+  for (const el of document.querySelectorAll("[data-so-admin]")) el.hidden = !usuario.administrador;
   for (const tela of document.querySelectorAll(".tela")) {
     const area = tela.querySelector(".precisa-disciplina");
     if (area) area.insertAdjacentHTML("beforebegin",

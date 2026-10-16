@@ -61,3 +61,26 @@ def remover_disciplina(disciplina_id: int, usuario: dict) -> None:
     rag.remover_documento(disciplina_id)
     shutil.rmtree(config.PASTA_UPLOADS / str(disciplina_id), ignore_errors=True)
     db.executar("DELETE FROM disciplinas WHERE id = ?", (disciplina_id,))
+
+
+# ---------------------------------------------------------------- administração
+
+def listar_sem_professor() -> list[dict]:
+    """Disciplinas de professores que excluíram a conta (dono = conta de sistema)."""
+    return db.consultar(
+        """SELECT d.id, d.nome, (SELECT COUNT(*) FROM matriculas WHERE disciplina_id = d.id) AS alunos
+           FROM disciplinas d JOIN usuarios u ON u.id = d.criado_por
+           WHERE u.sistema = 1 ORDER BY d.nome"""
+    )
+
+
+def transferir(disciplina_id: int, email_professor: str) -> dict:
+    disciplina_ou_404(disciplina_id)
+    professor = db.consultar_um(
+        "SELECT id, nome FROM usuarios WHERE email = ? AND tipo = 'professor' AND sistema = 0",
+        (email_professor.strip().lower(),),
+    )
+    if not professor:
+        raise HTTPException(404, "Não há professor com esse e-mail.")
+    db.executar("UPDATE disciplinas SET criado_por = ? WHERE id = ?", (professor["id"], disciplina_id))
+    return {"id": disciplina_id, "professor": professor["nome"]}
