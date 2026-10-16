@@ -1,5 +1,5 @@
 // Tela "Simulados": gera um simulado a partir de um PDF e mostra o histórico de notas.
-// Reaproveita renderSimulado() do app.js (a correção já salva a nota no servidor).
+// Reaproveita renderSimulado() do app.js: o servidor corrige e salva a nota.
 
 TELAS.simulados = {
   async abrir() {

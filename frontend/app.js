@@ -514,26 +514,35 @@ function renderSimulado(caixa, r) {
   html += `<button class="corrigir">Corrigir</button><p class="nota"></p>`;
   caixa.insertAdjacentHTML("beforeend", html);
 
-  caixa.querySelector(".corrigir").onclick = (evento) => {
-    let acertos = 0;
-    r.questoes.forEach((q, i) => {
+  // A correção é feita pelo servidor: o navegador não recebe o gabarito antes
+  caixa.querySelector(".corrigir").onclick = async (evento) => {
+    const botao = evento.target;
+    const respostas = r.questoes.map((_, i) => {
+      const marcada = caixa.querySelector(`.questao[data-indice="${i}"] input:checked`);
+      return marcada ? Number(marcada.value) : null;
+    });
+    botao.disabled = true;
+    let resultado;
+    try {
+      resultado = await postarJson(rotaDisciplina(`/simulados/${r.simulado_id}/respostas`), { respostas });
+    } catch (erro) {
+      caixa.querySelector(".nota").textContent = `Erro: ${erro.message}`;
+      botao.disabled = false;
+      return;
+    }
+    resultado.correcao.forEach((c, i) => {
       const bloco = caixa.querySelector(`.questao[data-indice="${i}"]`);
-      const marcada = bloco.querySelector("input:checked");
       const labels = bloco.querySelectorAll(".alternativa");
-      labels[q.correta].classList.add("certa");
-      if (marcada && Number(marcada.value) === q.correta) acertos++;
-      else if (marcada) labels[marcada.value].classList.add("errada");
+      labels[c.correta].classList.add("certa");
+      if (c.marcada !== null && !c.acertou) labels[c.marcada].classList.add("errada");
       bloco.querySelectorAll("input").forEach((inp) => (inp.disabled = true));
       const exp = bloco.querySelector(".explicacao");
-      exp.textContent = `${q.explicacao} (p. ${q.pagina})`;
+      exp.textContent = `${c.explicacao} (p. ${c.pagina})`;
       exp.hidden = false;
     });
-    caixa.querySelector(".nota").textContent = `Você acertou ${acertos} de ${r.questoes.length}.`;
-    evento.target.remove();
-    // Guarda a nota para o painel do professor
-    postarJson(rotaDisciplina("/simulado/resultado"), { arquivo: r.arquivo, acertos, total: r.questoes.length })
-      .then(() => { if (telaAtual === "simulados") carregarHistoricoSimulados(); })
-      .catch(() => {});
+    caixa.querySelector(".nota").textContent = `Você acertou ${resultado.acertos} de ${resultado.total}.`;
+    botao.remove();
+    if (telaAtual === "simulados") carregarHistoricoSimulados();
   };
 }
 

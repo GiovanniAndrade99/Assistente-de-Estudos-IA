@@ -56,6 +56,10 @@ def _consultas_de_exportacao(usuario_id: int) -> dict[str, tuple[str, tuple]]:
         "resultados_de_simulados": ("""SELECT d.nome AS disciplina, r.arquivo, r.acertos, r.total, r.criado_em
                                        FROM resultados_simulado r JOIN disciplinas d ON d.id = r.disciplina_id
                                        WHERE r.usuario_id = ? ORDER BY r.criado_em""", u),
+        "simulados": ("""SELECT d.nome AS disciplina, s.arquivo, s.questoes_json, s.respostas_json, s.acertos,
+                                s.total, s.criado_em, s.finalizado_em
+                         FROM simulados s JOIN disciplinas d ON d.id = s.disciplina_id
+                         WHERE s.usuario_id = ? ORDER BY s.criado_em""", u),
         "aulas_estudadas": ("""SELECT d.nome AS disciplina, doc.arquivo, c.criado_em FROM aulas_concluidas c
                                JOIN documentos doc ON doc.id = c.documento_id
                                JOIN disciplinas d ON d.id = doc.disciplina_id WHERE c.usuario_id = ?""", u),

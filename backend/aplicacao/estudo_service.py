@@ -7,7 +7,12 @@ todo o conteúdo. Isso aproveita a janela de contexto grande do Gemini.
 Flashcards e simulado usam "saída estruturada": passamos um schema (classes
 Pydantic abaixo) e o Gemini é obrigado a responder num JSON nesse formato,
 que o frontend consegue montar direto na tela.
+
+Simulado: o gabarito fica no servidor. O navegador recebe só perguntas e
+alternativas, manda as respostas e recebe a correção, calculada aqui.
 """
+import json
+
 from fastapi import HTTPException
 from pydantic import BaseModel
 from google.genai import types
@@ -16,8 +21,6 @@ from .. import prompts
 from ..erros import ErroDeUso
 from ..infraestrutura import db, rag
 from . import limite_service
-from .disciplinas_service import disciplina_ou_404
-from .documentos_service import nome_seguro
 
 # Limite de caracteres enviados ao modelo (~50 mil tokens), para não estourar a
 # cota por minuto do nível gratuito em apostilas muito grandes.
@@ -40,6 +43,9 @@ class Questao(BaseModel):
 
 def texto_do_documento(disciplina_id: int, arquivo: str) -> tuple[str, bool]:
     """Texto do PDF com marcações [Página N]. Retorna (texto, foi_cortado)."""
+    # Só documentos cadastrados na disciplina: não basta o arquivo existir na pasta
+    if not db.consultar_um("SELECT 1 FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, arquivo)):
+        raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
     caminho = rag.caminho_do_pdf(disciplina_id, arquivo)
     if not caminho.exists():
         raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
@@ -96,20 +102,56 @@ def gerar_simulado(disciplina_id: int, arquivo: str, usuario_id: int, quantidade
         q.model_dump() for q in resposta.parsed
         if len(q.alternativas) == 4 and 0 <= q.correta < 4
     ]
-    return {"arquivo": arquivo, "questoes": questoes, "aviso": _aviso(cortado), "modelo": modelo}
-
-
-# ---------------------------------------------------------------- resultados do simulado
-
-def salvar_resultado_simulado(disciplina_id: int, usuario_id: int, arquivo: str, acertos: int, total: int) -> None:
-    disciplina_ou_404(disciplina_id)
-    if acertos > total:
-        raise HTTPException(400, "Acertos maior que o total.")
-    db.executar(
-        """INSERT INTO resultados_simulado (usuario_id, disciplina_id, arquivo, acertos, total)
-           VALUES (?, ?, ?, ?, ?)""",
-        (usuario_id, disciplina_id, nome_seguro(arquivo), acertos, total),
+    if not questoes:
+        raise ErroDeUso("Não foi possível montar o simulado. Tente de novo.", 502)
+    simulado_id = db.executar(
+        "INSERT INTO simulados (usuario_id, disciplina_id, arquivo, questoes_json, total) VALUES (?, ?, ?, ?, ?)",
+        (usuario_id, disciplina_id, arquivo, json.dumps(questoes, ensure_ascii=False), len(questoes)),
     )
+    return {
+        "simulado_id": simulado_id,
+        "arquivo": arquivo,
+        # Sem gabarito, explicação nem página: só o que a pessoa precisa para responder
+        "questoes": [{"pergunta": q["pergunta"], "alternativas": q["alternativas"]} for q in questoes],
+        "aviso": _aviso(cortado),
+        "modelo": modelo,
+    }
+
+
+# ---------------------------------------------------------------- correção do simulado
+
+def corrigir_simulado(disciplina_id: int, simulado_id: int, usuario_id: int, respostas: list[int | None]) -> dict:
+    simulado = db.consultar_um(
+        "SELECT * FROM simulados WHERE id = ? AND disciplina_id = ? AND usuario_id = ?",
+        (simulado_id, disciplina_id, usuario_id),
+    )
+    if not simulado:
+        raise HTTPException(404, "Simulado não encontrado.")
+    questoes = json.loads(simulado["questoes_json"])
+    if len(respostas) != len(questoes):
+        raise HTTPException(400, "Envie uma resposta (ou vazio) para cada questão.")
+    correcao, acertos = [], 0
+    for questao, marcada in zip(questoes, respostas):
+        acertou = marcada == questao["correta"]
+        acertos += acertou
+        correcao.append({
+            "marcada": marcada, "correta": questao["correta"], "acertou": acertou,
+            "explicacao": questao["explicacao"], "pagina": questao["pagina"],
+        })
+    with db.conectar() as c:
+        # Uma correção só: duas requisições ao mesmo tempo não geram duas notas
+        corrigido = c.execute(
+            """UPDATE simulados SET respostas_json = ?, acertos = ?, finalizado_em = CURRENT_TIMESTAMP
+               WHERE id = ? AND finalizado_em IS NULL""",
+            (json.dumps(respostas), acertos, simulado_id),
+        ).rowcount
+        if not corrigido:
+            raise HTTPException(409, "Este simulado já foi corrigido.")
+        c.execute(
+            "INSERT INTO resultados_simulado (usuario_id, disciplina_id, arquivo, acertos, total) VALUES (?, ?, ?, ?, ?)",
+            (usuario_id, disciplina_id, simulado["arquivo"], acertos, len(questoes)),
+        )
+    return {"simulado_id": simulado_id, "acertos": acertos, "total": len(questoes), "correcao": correcao}
 
 
 def meus_resultados_simulado(disciplina_id: int, usuario_id: int) -> list[dict]:

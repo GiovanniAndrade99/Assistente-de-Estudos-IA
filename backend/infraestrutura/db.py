@@ -166,6 +166,21 @@ CREATE TABLE IF NOT EXISTS matriculas (
     UNIQUE (aluno_id, disciplina_id)
 );
 
+-- Simulados gerados: o gabarito fica só aqui até a pessoa responder, e a nota é
+-- calculada pelo servidor (antes o navegador recebia o gabarito e informava a nota).
+CREATE TABLE IF NOT EXISTS simulados (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    disciplina_id  INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    arquivo        TEXT NOT NULL,
+    questoes_json  TEXT NOT NULL,
+    respostas_json TEXT,
+    acertos        INTEGER,
+    total          INTEGER NOT NULL,
+    criado_em      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    finalizado_em  TEXT
+);
+
 -- Links enviados por e-mail (redefinir senha, confirmar e-mail, trocar e-mail). Guarda só
 -- o hash do token, que vale uma vez e expira. `dado` é o novo e-mail, na troca.
 CREATE TABLE IF NOT EXISTS tokens_conta (

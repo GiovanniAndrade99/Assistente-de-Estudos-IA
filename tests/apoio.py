@@ -75,3 +75,27 @@ def vetor_do_texto(texto: str, dimensoes: int = 64) -> list[float]:
 # Campos obrigatórios do cadastro pela API (ciência do aviso e idade mínima)
 DECLARACOES = {"aceite_privacidade": True, "declara_maioridade": True}
 
+
+
+def criar_pdf(caminho, paginas: list[str]) -> None:
+    """PDF de teste com uma página para cada texto."""
+    import pymupdf
+
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    documento = pymupdf.open()
+    for texto in paginas:
+        pagina = documento.new_page()
+        pagina.insert_textbox(pymupdf.Rect(50, 50, 550, 800), texto, fontsize=11)
+    documento.save(caminho)
+    documento.close()
+
+
+def criar_documento(disciplina_id: int, arquivo: str, enviado_por: int, paginas: list[str]) -> int:
+    """PDF na pasta de uploads + linha em documentos (sem indexar no RAG)."""
+    from backend.infraestrutura import db, rag
+
+    criar_pdf(rag.caminho_do_pdf(disciplina_id, arquivo), paginas)
+    return db.executar(
+        "INSERT INTO documentos (disciplina_id, arquivo, trechos, enviado_por) VALUES (?, ?, 1, ?)",
+        (disciplina_id, arquivo, enviado_por),
+    )
