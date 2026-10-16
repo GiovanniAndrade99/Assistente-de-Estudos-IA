@@ -1282,3 +1282,9 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 .bloco-metrica strong { font: 600 1.5rem var(--font-display); font-variant-numeric: tabular-nums; }
 .bloco-metrica span { font-size: .82rem; color: var(--ink-3); }
 #tabela-metricas td.numero { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Documentos em processamento (indexação em segundo plano) */
+.progresso-doc { height: 6px; margin: 6px 0 2px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.progresso-doc > div { height: 100%; background: var(--primary); transition: width .4s; }
+.alerta-doc { display: block; color: var(--accent-ink); }
+#lista-documentos .acoes button:disabled { opacity: .45; cursor: not-allowed; }

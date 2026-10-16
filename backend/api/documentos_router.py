@@ -11,7 +11,7 @@ def listar_documentos(disciplina_id: int, usuario: dict = Depends(participante_d
     return documentos_service.listar_documentos(disciplina_id, usuario["id"])
 
 
-@router.post("/api/disciplinas/{disciplina_id}/documentos")
+@router.post("/api/disciplinas/{disciplina_id}/documentos", status_code=202)
 def enviar_documento(disciplina_id: int, arquivo: UploadFile, professor: dict = Depends(professor_da_disciplina)):
     return documentos_service.enviar_documento(disciplina_id, arquivo, professor["id"])
 

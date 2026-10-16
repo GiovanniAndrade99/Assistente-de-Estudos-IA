@@ -181,6 +181,15 @@ CREATE TABLE IF NOT EXISTS simulados (
     finalizado_em  TEXT
 );
 
+-- Texto de cada página dos PDFs, guardado na indexação: resumo, flashcards e simulado
+-- leem daqui em vez de reabrir o PDF (e repetir o OCR, que é lento).
+CREATE TABLE IF NOT EXISTS paginas_documento (
+    documento_id  INTEGER NOT NULL REFERENCES documentos(id) ON DELETE CASCADE,
+    pagina        INTEGER NOT NULL,
+    texto         TEXT NOT NULL,
+    PRIMARY KEY (documento_id, pagina)
+);
+
 -- Métricas de uso sem dado pessoal: só contagens por dia e por evento
 -- (infraestrutura/metricas.py). Não há coluna de usuário de propósito.
 CREATE TABLE IF NOT EXISTS metricas_diarias (
@@ -219,6 +228,14 @@ MIGRACOES = [
     # Conta de sistema ("Professor removido"): recebe as disciplinas de professores que
     # excluíram a conta e não faz login.
     ("usuarios", "sistema", "INTEGER NOT NULL DEFAULT 0"),
+    # Indexação em segundo plano: 'processando' -> 'pronto' ou 'erro'
+    ("documentos", "status", "TEXT NOT NULL DEFAULT 'pronto'"),
+    ("documentos", "progresso", "INTEGER NOT NULL DEFAULT 100"),
+    ("documentos", "erro", "TEXT"),
+    # PDF com frases que parecem instruções para a IA (tentativa de injeção de prompt)
+    ("documentos", "alerta_instrucoes", "INTEGER NOT NULL DEFAULT 0"),
+    # Sobe a cada reenvio do mesmo arquivo: a indexação antiga sabe que ficou obsoleta
+    ("documentos", "versao", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

@@ -316,10 +316,14 @@ function selecionarDisciplina(disciplina) {
   disciplinaAtual = disciplina;
   mensagens.innerHTML = "";
   const temDisciplina = Boolean(disciplina);
-  $("botao-remover-disciplina").hidden = !temDisciplina || disciplina.criado_por !== usuario.id;
+  const gerencia = temDisciplina && podeGerenciar(disciplina);
+  $("botao-remover-disciplina").hidden = !gerencia;
   inputPergunta.disabled = !temDisciplina;
   botaoEnviarPergunta.disabled = !temDisciplina;
   botaoAnexar.disabled = !temDisciplina;
+  // Enviar, anexar e remover PDFs: só quem gerencia a disciplina (o servidor também confere)
+  botaoAnexar.hidden = !gerencia;
+  for (const el of document.querySelectorAll(".botao-upload, .aviso-upload")) el.hidden = !gerencia;
   atualizarAreasDaDisciplina();
 
   $("assistente-subtitulo").textContent = temDisciplina
@@ -381,20 +385,45 @@ $("botao-remover-disciplina").onclick = async () => {
 
 // ---------------------------------------------------------- documentos
 
+function podeGerenciar(disciplina) {
+  return Boolean(usuario.administrador) || disciplina.criado_por === usuario.id;
+}
+
+// Enquanto houver PDF sendo processado, a lista se atualiza sozinha
+let temporizadorDocumentos = null;
+
+function situacaoDoDocumento(doc) {
+  if (doc.status === "processando") {
+    return `<div class="progresso-doc" role="progressbar" aria-valuenow="${doc.progresso}" aria-valuemin="0"
+      aria-valuemax="100" aria-label="Processando o PDF"><div data-largura="${doc.progresso}"></div></div>
+      <small>Processando… ${doc.progresso}%</small>`;
+  }
+  if (doc.status === "erro") return `<small class="erro">✖ ${escaparHtml(doc.erro || "Falha ao processar.")}</small>`;
+  const alerta = doc.alerta_instrucoes && podeGerenciar(disciplinaAtual)
+    ? `<small class="alerta-doc" title="Trechos do PDF parecem instruções para a IA. Ela foi orientada a ignorá-las, mas confira o arquivo.">⚠ Contém frases que parecem comandos para a IA</small>`
+    : "";
+  return `<small>${doc.trechos} trechos · enviado por ${escaparHtml(doc.enviado_por)}</small>${alerta}`;
+}
+
 async function carregarDocumentos() {
+  clearTimeout(temporizadorDocumentos);
+  const disciplinaDaBusca = disciplinaAtual.id;
   const docs = await chamarApi(rotaDisciplina("/documentos"));
+  if (!disciplinaAtual || disciplinaAtual.id !== disciplinaDaBusca) return;
   listaDocumentos.innerHTML = docs.length
     ? ""
     : "<li><small>Nenhum material enviado.</small></li>";
+  const gerencia = podeGerenciar(disciplinaAtual);
 
   for (const doc of docs) {
     const li = document.createElement("li");
+    const pronto = doc.status === "pronto";
     li.innerHTML = `
       <div class="doc-topo">
         <span class="nome" title="${escaparHtml(doc.arquivo)}">📄 ${escaparHtml(doc.arquivo)}</span>
-        <button class="remover" title="Remover">✕</button>
+        ${gerencia ? `<button class="remover" title="Remover">✕</button>` : ""}
       </div>
-      <small>${doc.trechos} trechos · enviado por ${escaparHtml(doc.enviado_por)}</small>
+      ${situacaoDoDocumento(doc)}
       <label class="marcar-estudada"><input type="checkbox" ${doc.concluida ? "checked" : ""}> Aula estudada</label>
       <div class="acoes">
         <button data-acao="resumo">📝 Resumo</button>
@@ -417,26 +446,47 @@ async function carregarDocumentos() {
         alert(erro.message);
       }
     };
-    li.querySelector(".remover").onclick = async () => {
+    const remover = li.querySelector(".remover");
+    if (remover) remover.onclick = async () => {
       if (!confirm(`Remover ${doc.arquivo}?`)) return;
       await chamarApi(rotaDisciplina(`/documentos/${encodeURIComponent(doc.arquivo)}`), { method: "DELETE" });
       carregarDocumentos();
     };
     for (const botao of li.querySelectorAll(".acoes button")) {
+      botao.disabled = !pronto;
       botao.onclick = () => executarAcao(botao.dataset.acao, doc.arquivo);
     }
     listaDocumentos.appendChild(li);
   }
+  if (docs.some((d) => d.status === "processando")) {
+    temporizadorDocumentos = setTimeout(() => carregarDocumentos().catch(() => {}), 2000);
+  }
+  return docs;
+}
+
+// Espera os PDFs enviados terminarem de processar (usado pelos anexos do chat)
+async function esperarDocumentosProntos(nomes, aoAtualizar) {
+  for (let tentativa = 0; tentativa < 300; tentativa++) {
+    const docs = await chamarApi(rotaDisciplina("/documentos"));
+    const meus = docs.filter((d) => nomes.includes(d.arquivo));
+    const processando = meus.filter((d) => d.status === "processando");
+    const comErro = meus.filter((d) => d.status === "erro");
+    if (comErro.length) throw new Error(`${comErro[0].arquivo}: ${comErro[0].erro}`);
+    if (meus.length === nomes.length && !processando.length) return;
+    if (aoAtualizar && processando.length) aoAtualizar(Math.min(...processando.map((d) => d.progresso)));
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  throw new Error("O processamento do PDF está demorando. Pergunte de novo daqui a pouco.");
 }
 
 inputPdf.addEventListener("change", async () => {
   for (const arquivo of inputPdf.files) {
-    statusUpload.textContent = `Processando ${arquivo.name}...`;
+    statusUpload.textContent = `Enviando ${arquivo.name}...`;
     const dados = new FormData();
     dados.append("arquivo", arquivo);
     try {
       const r = await chamarApi(rotaDisciplina("/documentos"), { method: "POST", body: dados });
-      statusUpload.textContent = `✔ ${r.arquivo}: ${r.trechos} trechos indexados`;
+      statusUpload.textContent = `✔ ${r.arquivo} enviado; o processamento aparece na lista abaixo.`;
     } catch (erro) {
       statusUpload.textContent = `✖ ${arquivo.name}: ${erro.message}`;
     }
@@ -706,7 +756,13 @@ formPergunta.addEventListener("submit", async (evento) => {
       dados.append("arquivo", arquivo);
       await chamarApi(rotaDisciplina("/documentos"), { method: "POST", body: dados, signal: controle.signal });
     }
-    if (anexos.length) await carregarDocumentos();
+    if (anexos.length) {
+      carregarDocumentos();
+      await esperarDocumentosProntos(anexos.map((a) => a.name), (pct) => {
+        estadoCompositor.textContent = `Processando os PDFs… ${pct}%`;
+      });
+      carregarDocumentos();
+    }
     estadoCompositor.textContent = "";
     const r = await chamarApi(rotaDisciplina("/chat"), {
       method: "POST",

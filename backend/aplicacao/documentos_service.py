@@ -1,11 +1,16 @@
-"""Regras de negócio de documentos (PDFs) das disciplinas."""
+"""Regras de negócio de documentos (PDFs) das disciplinas.
+
+O envio só grava o arquivo e responde; a indexação (texto, OCR, embeddings) roda em
+segundo plano (aplicacao/indexacao_service.py) e a tela acompanha pelo status.
+"""
+import os
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 
 from .. import config
 from ..infraestrutura import db, metricas, rag
-from . import limite_service
+from . import indexacao_service, limite_service
 from .disciplinas_service import disciplina_ou_404
 
 _TAMANHO_CHUNK = 1024 * 1024  # 1 MiB por leitura
@@ -19,6 +24,7 @@ def listar_documentos(disciplina_id: int, usuario_id: int) -> list[dict]:
     disciplina_ou_404(disciplina_id)
     return db.consultar(
         """SELECT doc.id, doc.arquivo, doc.trechos, doc.criado_em, u.nome AS enviado_por,
+                  doc.status, doc.progresso, doc.erro, doc.alerta_instrucoes,
                   (c.documento_id IS NOT NULL) AS concluida
            FROM documentos doc JOIN usuarios u ON u.id = doc.enviado_por
            LEFT JOIN aulas_concluidas c ON c.documento_id = doc.id AND c.usuario_id = ?
@@ -49,29 +55,40 @@ def enviar_documento(disciplina_id: int, arquivo: UploadFile, usuario_id: int) -
         raise HTTPException(400, "Envie um arquivo .pdf")
 
     conteudo = _ler_com_limite(arquivo, config.TAMANHO_MAX_UPLOAD_MB)
-    destino = rag.caminho_do_pdf(disciplina_id, nome)
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_bytes(conteudo)
-    try:
-        trechos = rag.indexar_pdf(disciplina_id, nome)
-    except Exception:
-        destino.unlink(missing_ok=True)
-        raise
+    rag.contar_paginas(conteudo)  # confere já que é um PDF que abre; o resto vai para segundo plano
 
-    db.executar(
-        """INSERT INTO documentos (disciplina_id, arquivo, trechos, enviado_por) VALUES (?, ?, ?, ?)
-           ON CONFLICT (disciplina_id, arquivo) DO UPDATE
-           SET trechos = excluded.trechos, enviado_por = excluded.enviado_por, criado_em = CURRENT_TIMESTAMP""",
-        (disciplina_id, nome, trechos, usuario_id),
-    )
+    with indexacao_service.TRAVA_DOCUMENTOS:
+        existente = db.consultar_um("SELECT status FROM documentos WHERE disciplina_id = ? AND arquivo = ?",
+                                    (disciplina_id, nome))
+        if existente and existente["status"] == "processando":
+            raise HTTPException(409, "Este PDF ainda está sendo processado. Espere terminar para enviar de novo.")
+        destino = rag.caminho_do_pdf(disciplina_id, nome)
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        temporario = destino.with_name(destino.name + ".enviando")
+        temporario.write_bytes(conteudo)
+        os.replace(temporario, destino)
+        db.executar(
+            """INSERT INTO documentos (disciplina_id, arquivo, trechos, enviado_por, status, progresso)
+               VALUES (?, ?, 0, ?, 'processando', 0)
+               ON CONFLICT (disciplina_id, arquivo) DO UPDATE
+               SET enviado_por = excluded.enviado_por, criado_em = CURRENT_TIMESTAMP, status = 'processando',
+                   progresso = 0, erro = NULL, alerta_instrucoes = 0, versao = versao + 1""",
+            (disciplina_id, nome, usuario_id),
+        )
+        # No reenvio o UPSERT atualiza a linha existente e não devolve o id dela
+        documento_id = db.consultar_um("SELECT id FROM documentos WHERE disciplina_id = ? AND arquivo = ?",
+                                       (disciplina_id, nome))["id"]
     metricas.registrar("upload_pdf")
-    return {"arquivo": nome, "trechos": trechos}
+    indexacao_service.enfileirar(documento_id)
+    return {"id": documento_id, "arquivo": nome, "status": "processando"}
 
 
 def remover_documento(disciplina_id: int, arquivo: str) -> None:
     # Quem pode chamar esta função já foi conferido na rota (dependencias.
     # professor_da_disciplina): só o professor dono da disciplina, ou admin.
     nome = nome_seguro(arquivo)
-    rag.remover_documento(disciplina_id, nome)
-    rag.caminho_do_pdf(disciplina_id, nome).unlink(missing_ok=True)
-    db.executar("DELETE FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, nome))
+    # Com a trava, uma indexação em andamento não devolve os trechos ao índice depois
+    with indexacao_service.TRAVA_DOCUMENTOS:
+        db.executar("DELETE FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, nome))
+        rag.remover_documento(disciplina_id, nome)
+        rag.caminho_do_pdf(disciplina_id, nome).unlink(missing_ok=True)

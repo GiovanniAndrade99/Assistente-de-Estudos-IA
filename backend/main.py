@@ -26,7 +26,7 @@ from .api import (
     ia_router, privacidade_router, professor_router, progresso_router, saude_router, suporte_router,
     turma_router,
 )
-from .aplicacao import demo_service, retencao_service
+from .aplicacao import demo_service, indexacao_service, retencao_service
 from .excecoes import registrar_handlers
 from .infraestrutura import db
 from .infraestrutura.logging_setup import configurar_logging
@@ -87,14 +87,18 @@ def criar_app(iniciar_tarefas: bool = True) -> FastAPI:
         _conferir_configuracao()
         _preparar_dados()
         tarefas = []
+        # Nos testes a indexação roda na própria requisição (síncrona)
+        indexacao_service.iniciar(sincrono=not iniciar_tarefas)
         if iniciar_tarefas:
             await asyncio.to_thread(retencao_service.executar_limpeza)
+            await asyncio.to_thread(indexacao_service.retomar_pendentes)
             tarefas.append(asyncio.create_task(_limpeza_periodica()))
         try:
             yield
         finally:
             for tarefa in tarefas:
                 tarefa.cancel()
+            indexacao_service.parar()
 
     producao = config.APP_ENV == "production"
     app = FastAPI(

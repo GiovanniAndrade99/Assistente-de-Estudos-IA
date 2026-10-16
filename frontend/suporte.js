@@ -11,7 +11,7 @@ const PERGUNTAS_FREQUENTES = [
   ["O assistente pode errar?",
     "Sim. É um modelo de IA e pode interpretar mal um trecho. Clique em \"Ver trechos usados\" abaixo da resposta para ver o arquivo e a página usados e confira no material. Veja mais na aba \"Sobre o assistente IA\"."],
   ["Meu PDF foi enviado, mas o assistente não usa o conteúdo.",
-    "PDFs escaneados (só imagem) não têm texto que possa ser lido. Use um PDF com texto selecionável, ou abra um chamado na categoria \"Problema técnico\"."],
+    "Depois do envio, o PDF é processado em segundo plano: acompanhe a barra na lista de materiais. PDFs escaneados passam por leitura de texto (OCR), que é mais lenta e pode errar em imagens ruins. Se aparecer erro, abra um chamado na categoria \"Problema técnico\"."],
   ["Apareceu um erro de limite ou de modelo sobrecarregado.",
     "O nível gratuito da API do Gemini limita as requisições por minuto. O sistema já tenta de novo e troca para modelos reserva; se o erro continuar, espere um minuto e tente outra vez."],
   ["Como gero resumos, flashcards e simulados?",

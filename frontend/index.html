@@ -88,11 +88,11 @@
 
         <section id="secao-materiais" class="grupo-lateral" hidden>
           <h2>Materiais</h2>
-          <label class="botao-upload" data-so-professor hidden>
+          <label class="botao-upload" hidden>
             <svg><use href="#i-upload"/></svg> Enviar PDF
             <input type="file" id="input-pdf" accept=".pdf" multiple hidden>
           </label>
-          <p class="dica aviso-upload" data-so-professor hidden>Não envie PDFs com dados pessoais de outras
+          <p class="dica aviso-upload" hidden>Não envie PDFs com dados pessoais de outras
             pessoas (listas de chamada, notas, documentos). O texto vai para o provedor de IA.</p>
           <p id="status-upload" class="status"></p>
           <ul id="lista-documentos"></ul>
@@ -455,7 +455,7 @@
           <h3>O que ele não faz</h3>
           <ul class="lista-ia nao-pode">
             <li>Usar conhecimento de fora dos PDFs da disciplina</li>
-            <li>Ler PDFs escaneados (só imagem, sem texto)</li>
+            <li>Garantir a leitura de PDFs escaneados: o texto é lido por OCR, que pode errar em imagens ruins</li>
             <li>Lembrar de conversas anteriores: cada pergunta é independente</li>
             <li>Substituir o professor, corrigir atividades ou dar notas</li>
           </ul>

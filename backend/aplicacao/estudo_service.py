@@ -44,12 +44,20 @@ class Questao(BaseModel):
 def texto_do_documento(disciplina_id: int, arquivo: str) -> tuple[str, bool]:
     """Texto do PDF com marcações [Página N]. Retorna (texto, foi_cortado)."""
     # Só documentos cadastrados na disciplina: não basta o arquivo existir na pasta
-    if not db.consultar_um("SELECT 1 FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, arquivo)):
+    documento = db.consultar_um("SELECT id, status FROM documentos WHERE disciplina_id = ? AND arquivo = ?",
+                                (disciplina_id, arquivo))
+    if not documento:
         raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
-    caminho = rag.caminho_do_pdf(disciplina_id, arquivo)
-    if not caminho.exists():
-        raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
-    texto = "\n\n".join(f"[Página {n}]\n{t}" for n, t in rag.extrair_paginas(caminho))
+    if documento["status"] != "pronto":
+        raise ErroDeUso("Este PDF ainda está sendo processado. Tente de novo quando terminar.", 409)
+    paginas = [(l["pagina"], l["texto"]) for l in db.consultar(
+        "SELECT pagina, texto FROM paginas_documento WHERE documento_id = ? ORDER BY pagina", (documento["id"],))]
+    if not paginas:  # documento indexado antes do texto ser guardado
+        caminho = rag.caminho_do_pdf(disciplina_id, arquivo)
+        if not caminho.exists():
+            raise ErroDeUso("Arquivo não encontrado nesta disciplina.", 404)
+        paginas = rag.extrair_paginas(caminho)
+    texto = "\n\n".join(f"[Página {n}]\n{t}" for n, t in paginas)
     if len(texto) > LIMITE_CARACTERES:
         return texto[:LIMITE_CARACTERES], True
     return texto, False

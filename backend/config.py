@@ -106,6 +106,13 @@ PASTA_BACKUPS = Path(os.getenv("PASTA_BACKUPS", str(RAIZ / "backups")))
 PASTA_INDICE = PASTA_DADOS / "indice"
 PASTA_FRONTEND = RAIZ / "frontend"
 
+# OCR de PDF escaneado (Tesseract). TESSDATA: pasta dos idiomas, se não for achada sozinha.
+OCR_HABILITADO = _bool("OCR_HABILITADO", True)
+OCR_IDIOMAS = os.getenv("OCR_IDIOMAS", "por+eng")
+OCR_DPI = int(os.getenv("OCR_DPI", "200"))
+OCR_MAX_PAGINAS = int(os.getenv("OCR_MAX_PAGINAS", "300"))
+TESSDATA = os.getenv("TESSDATA_PREFIX", "")
+
 # Parâmetros do RAG (bons candidatos para experimentar e comparar no relatório)
 TAMANHO_TRECHO = 1000   # caracteres por trecho (chunk)
 SOBREPOSICAO = 200      # caracteres repetidos entre trechos vizinhos

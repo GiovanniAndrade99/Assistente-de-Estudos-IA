@@ -58,9 +58,12 @@ def matricular(aluno_id: int, disciplina_ids: list[int]) -> None:
 def remover_disciplina(disciplina_id: int, usuario: dict) -> None:
     if disciplina_ou_404(disciplina_id)["criado_por"] != usuario["id"] and not usuario.get("administrador"):
         raise HTTPException(403, "Só quem criou a disciplina (ou um administrador) pode removê-la.")
-    rag.remover_documento(disciplina_id)
-    shutil.rmtree(config.PASTA_UPLOADS / str(disciplina_id), ignore_errors=True)
-    db.executar("DELETE FROM disciplinas WHERE id = ?", (disciplina_id,))
+    from .indexacao_service import TRAVA_DOCUMENTOS
+
+    with TRAVA_DOCUMENTOS:
+        db.executar("DELETE FROM disciplinas WHERE id = ?", (disciplina_id,))
+        rag.remover_documento(disciplina_id)
+        shutil.rmtree(config.PASTA_UPLOADS / str(disciplina_id), ignore_errors=True)
 
 
 # ---------------------------------------------------------------- administração

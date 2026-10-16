@@ -6,6 +6,9 @@ Indexação (upload de um PDF):
 Consulta (pergunta do aluno):
     pergunta -> embedding -> busca dos trechos mais parecidos (cosseno)
     -> prompt (trechos + pergunta) -> Gemini -> resposta com citações
+
+PDF escaneado: quando uma página quase não tem texto, o texto é lido por OCR
+(Tesseract, via PyMuPDF), se o Tesseract com os idiomas configurados existir.
 """
 import logging
 from pathlib import Path
@@ -24,8 +27,17 @@ from .vetores import BancoVetorial
 
 logger = logging.getLogger("rag")
 
-_banco = BancoVetorial(config.PASTA_INDICE)
+_banco: BancoVetorial | None = None
 _cliente_gemini = None
+_tessdata: str | None | bool = False  # False = ainda não procurado
+
+
+def banco() -> BancoVetorial:
+    """Índice vetorial, carregado do disco no primeiro uso (não na importação)."""
+    global _banco
+    if _banco is None:
+        _banco = BancoVetorial(config.PASTA_INDICE)
+    return _banco
 
 
 def _gemini() -> genai.Client:
@@ -91,17 +103,67 @@ def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
 
 # ---------------------------------------------------------------- indexação
 
-def extrair_paginas(caminho: Path) -> list[tuple[int, str]]:
-    """Retorna [(numero_da_pagina, texto), ...], pulando páginas vazias."""
+_FLAGS_TEXTO = pymupdf.TEXTFLAGS_TEXT & ~pymupdf.TEXT_PRESERVE_LIGATURES
+MINIMO_DE_TEXTO = 20  # abaixo disso a página é tratada como imagem (PDF escaneado)
+
+
+def tessdata() -> str | None:
+    """Pasta dos idiomas do Tesseract, procurada uma vez só (cada busca abre um processo)."""
+    global _tessdata
+    if _tessdata is False:
+        if not config.OCR_HABILITADO:
+            _tessdata = None
+        else:
+            try:
+                _tessdata = config.TESSDATA or pymupdf.get_tessdata()
+            except Exception:  # Tesseract não instalado
+                _tessdata = None
+            if not _tessdata:
+                logger.warning("ocr_indisponivel")
+    return _tessdata or None
+
+
+def _texto_da_pagina(pagina, numero: int) -> str:
+    # Sem PRESERVE_LIGATURES: "ﬁ" (um caractere só) vira "fi", senão a busca não casa as palavras
+    texto = " ".join(pagina.get_text(flags=_FLAGS_TEXTO).split())
+    if len(texto) >= MINIMO_DE_TEXTO or numero > config.OCR_MAX_PAGINAS or not pagina.get_images():
+        return texto
+    pasta_idiomas = tessdata()
+    if not pasta_idiomas:
+        return texto
+    try:
+        camada = pagina.get_textpage_ocr(language=config.OCR_IDIOMAS, dpi=config.OCR_DPI, full=True,
+                                         tessdata=pasta_idiomas)
+        return " ".join(pagina.get_text(textpage=camada, flags=_FLAGS_TEXTO).split())
+    except Exception:
+        logger.warning("ocr_falhou", extra={"pagina": numero})
+        return texto
+
+
+def extrair_paginas(caminho: Path, progresso=None) -> list[tuple[int, str]]:
+    """Retorna [(numero_da_pagina, texto), ...], pulando páginas vazias.
+    `progresso(feitas, total)` é chamado a cada página (para a barra de progresso)."""
     paginas = []
     with pymupdf.open(caminho) as pdf:
+        total = len(pdf)
         for numero, pagina in enumerate(pdf, start=1):
-            # Sem PRESERVE_LIGATURES: "ﬁ" (um caractere só) vira "fi", senão a busca não casa as palavras
-            texto = pagina.get_text(flags=pymupdf.TEXTFLAGS_TEXT & ~pymupdf.TEXT_PRESERVE_LIGATURES)
-            texto = " ".join(texto.split())  # normaliza espaços
+            texto = _texto_da_pagina(pagina, numero)
             if texto:
                 paginas.append((numero, texto))
+            if progresso:
+                progresso(numero, total)
     return paginas
+
+
+def contar_paginas(conteudo: bytes) -> int:
+    """Confere se os bytes são um PDF que abre e devolve o número de páginas."""
+    if not conteudo.startswith(b"%PDF-"):
+        raise ErroDeUso("O arquivo não é um PDF válido.")
+    try:
+        with pymupdf.open(stream=conteudo, filetype="pdf") as pdf:
+            return len(pdf)
+    except Exception as erro:
+        raise ErroDeUso("Não foi possível abrir o PDF. Ele pode estar corrompido ou protegido por senha.") from erro
 
 
 def dividir_em_trechos(texto: str) -> list[str]:
@@ -137,41 +199,56 @@ def gerar_embeddings(textos: list[str], tipo: str) -> list[list[float]]:
     return vetores
 
 
+def montar_trechos(disciplina_id: int, arquivo: str, paginas: list[tuple[int, str]]) -> list[dict]:
+    trechos = [
+        {"texto": trecho, "arquivo": arquivo, "pagina": pagina, "disciplina_id": disciplina_id}
+        for pagina, texto_pagina in paginas
+        for trecho in dividir_em_trechos(texto_pagina)
+    ]
+    if not trechos:
+        raise ErroDeUso("Não foi possível extrair texto do PDF. Se ele for escaneado, o OCR não encontrou "
+                        "texto legível.")
+    return trechos
+
+
+def gerar_embeddings_com_progresso(trechos: list[dict], progresso=None) -> list[list[float]]:
+    vetores = []
+    for i in range(0, len(trechos), 100):
+        vetores.extend(gerar_embeddings([t["texto"] for t in trechos[i:i + 100]], "RETRIEVAL_DOCUMENT"))
+        if progresso:
+            progresso(len(vetores), len(trechos))
+    return vetores
+
+
 def caminho_do_pdf(disciplina_id: int, arquivo: str) -> Path:
     """Os PDFs ficam em data/uploads/<id da disciplina>/<arquivo>.pdf"""
     return config.PASTA_UPLOADS / str(disciplina_id) / Path(arquivo).name
 
 
 def indexar_pdf(disciplina_id: int, arquivo: str) -> int:
-    """Lê um PDF já salvo e guarda seus trechos no banco vetorial. Retorna quantos trechos."""
-    remover_documento(disciplina_id, arquivo)  # se reenviarem o mesmo arquivo, substitui
-
-    trechos = [
-        {"texto": trecho, "arquivo": arquivo, "pagina": pagina, "disciplina_id": disciplina_id}
-        for pagina, texto_pagina in extrair_paginas(caminho_do_pdf(disciplina_id, arquivo))
-        for trecho in dividir_em_trechos(texto_pagina)
-    ]
-    if not trechos:
-        raise ErroDeUso("Não foi possível extrair texto do PDF (pode ser um PDF escaneado/imagem).")
-
-    vetores = gerar_embeddings([t["texto"] for t in trechos], "RETRIEVAL_DOCUMENT")
-    _banco.adicionar(vetores, trechos)
+    """Lê um PDF já salvo e guarda seus trechos no banco vetorial, de uma vez (usado por
+    scripts). Se o arquivo já estava indexado, os trechos antigos só saem quando os
+    novos estão prontos. Retorna quantos trechos."""
+    paginas = extrair_paginas(caminho_do_pdf(disciplina_id, arquivo))
+    trechos = montar_trechos(disciplina_id, arquivo, paginas)
+    vetores = gerar_embeddings_com_progresso(trechos)
+    banco().substituir(disciplina_id, arquivo, vetores, trechos)
     return len(trechos)
 
 
 def remover_documento(disciplina_id: int, arquivo: str | None = None) -> None:
     """Remove um arquivo da disciplina (ou todos, se arquivo=None) do banco vetorial."""
-    _banco.remover(disciplina_id, arquivo)
+    banco().remover(disciplina_id, arquivo)
 
 
 # ---------------------------------------------------------------- consulta
 
 def buscar(pergunta: str, disciplina_id: int, k: int = config.TOP_K) -> list[dict]:
     """Retorna os k trechos da disciplina mais parecidos com a pergunta."""
-    if len(_banco) == 0:
+    if len(banco()) == 0:
         return []
     vetor = gerar_embeddings([pergunta], "RETRIEVAL_QUERY")[0]
-    return _banco.buscar(vetor, k, disciplina_id)
+    return banco().buscar(vetor, k, disciplina_id)
 
 
 def responder(pergunta: str, disciplina_id: int) -> dict:
