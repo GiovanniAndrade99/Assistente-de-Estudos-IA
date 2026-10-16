@@ -173,6 +173,16 @@ MIGRACOES = [
     ("eventos", "hora", "TEXT"),
     ("sessoes", "expires_at", "TEXT"),
     ("usuarios", "administrador", "INTEGER NOT NULL DEFAULT 0"),
+    # Ciência do aviso de privacidade e declaração de idade mínima (LGPD, arts. 9º e 14).
+    # Não guardamos data de nascimento: só a versão do aviso lido e quando a pessoa declarou.
+    ("usuarios", "aceite_privacidade_versao", "TEXT"),
+    ("usuarios", "aceite_privacidade_em", "TEXT"),
+    ("usuarios", "maioridade_declarada_em", "TEXT"),
+    ("usuarios", "ultimo_acesso", "TEXT"),
+    ("usuarios", "email_verificado_em", "TEXT"),
+    # Conta de sistema ("Professor removido"): recebe as disciplinas de professores que
+    # excluíram a conta e não faz login.
+    ("usuarios", "sistema", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
 

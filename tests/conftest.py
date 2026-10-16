@@ -39,6 +39,8 @@ def ambiente_isolado(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CODIGO_PROFESSOR", "codigo-teste")
     monkeypatch.setattr(config, "DADOS_DEMO", False)
     monkeypatch.setattr(config, "SEGREDO_APP", "segredo-de-teste")
+    monkeypatch.setattr(config, "CONTROLADOR_NOME", "Escola de Teste")
+    monkeypatch.setattr(config, "CONTROLADOR_CONTATO", "privacidade@escola.test")
     monkeypatch.setattr(config, "GEMINI_API_KEY", "")
     db.criar_tabelas()
 

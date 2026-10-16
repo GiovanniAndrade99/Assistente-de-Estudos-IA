@@ -1,3 +1,4 @@
+from apoio import DECLARACOES
 def test_catalogo_publico_e_matricula_do_aluno(database, client):
     professor_id = database.executar(
         "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
@@ -20,6 +21,7 @@ def test_catalogo_publico_e_matricula_do_aluno(database, client):
         "email": "estudante@example.test",
         "senha": "senha-segura-123",
         "tipo": "aluno",
+        **DECLARACOES,
         "disciplinas": [primeira],
     })
     assert cadastro.status_code == 200
@@ -35,6 +37,7 @@ def test_aluno_nao_pode_criar_disciplina(client):
         "email": "estudante@example.test",
         "senha": "senha-segura-123",
         "tipo": "aluno",
+        **DECLARACOES,
     })
     assert cadastro.status_code == 200
     resposta = client.post("/api/disciplinas", json={"nome": "Disciplina restrita"})

@@ -1,9 +1,13 @@
 """Dependências do FastAPI usadas por praticamente toda rota autenticada."""
 from fastapi import Depends, HTTPException, Request
 
-from ..aplicacao import participacao_service
+from ..aplicacao import auth_service, participacao_service
 from ..aplicacao.auth_service import NOME_COOKIE, usuario_da_sessao
 from ..infraestrutura import db
+
+# Liberadas antes de a pessoa confirmar o aviso de privacidade e a idade mínima:
+# a própria conta (inclusive baixar e excluir os dados) e o suporte.
+_LIBERADAS_SEM_CIENCIA = ("/api/auth/", "/api/conta/", "/api/suporte/")
 
 
 def usuario_atual(request: Request) -> dict:
@@ -12,6 +16,12 @@ def usuario_atual(request: Request) -> dict:
     if not usuario:
         raise HTTPException(401, "Faça login para continuar.")
     request.state.usuario_id = usuario["id"]  # lido pelo log de acesso (middlewares/observabilidade.py)
+    auth_service.registrar_acesso(usuario)
+    if auth_service.ciencia_pendente(usuario) and not request.url.path.startswith(_LIBERADAS_SEM_CIENCIA):
+        raise HTTPException(
+            403, "Confirme o aviso de privacidade e a idade mínima para continuar.",
+            headers={"X-Acao-Necessaria": "ciencia-privacidade"},
+        )
     return usuario
 
 

@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
-from apoio import criar_usuario, entrar
+from apoio import DECLARACOES, criar_usuario, entrar
 
 HEX64 = re.compile(r"^[a-z]+:[0-9a-f]{64}$")
 
@@ -16,6 +16,7 @@ def test_tentativas_e_limites_guardam_so_pseudonimos(client, database):
         client.post("/api/auth/login", json={"email": email, "senha": "senha-errada-123"})
     client.post("/api/auth/cadastro", json={
         "nome": "Teste", "email": "novo@example.test", "senha": "senha-segura-123", "tipo": "aluno",
+        **DECLARACOES,
     })
 
     chaves = [l["chave"] for l in database.consultar("SELECT chave FROM tentativas_login")]

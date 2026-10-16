@@ -197,6 +197,16 @@ function validar(form) {
     if (erro && valido) codigo.focus();
     valido &&= !erro;
   }
+  if (form === formCadastrar) {
+    const aceite = document.getElementById("cad-aceite-privacidade");
+    const maioridade = document.getElementById("cad-maioridade");
+    const erro = !aceite.checked
+      ? "Confirme que leu o aviso de privacidade."
+      : !maioridade.checked ? "O Assistente de Estudos é só para quem tem 18 anos ou mais." : "";
+    aceite.closest(".campo").querySelector(".erro-campo").textContent = erro;
+    if (erro && valido) (aceite.checked ? maioridade : aceite).focus();
+    valido &&= !erro;
+  }
   return valido;
 }
 
@@ -239,7 +249,11 @@ async function enviar(form, url, extra = {}) {
 formEntrar.addEventListener("submit", (e) => { e.preventDefault(); enviar(formEntrar, "/api/auth/login"); });
 formCadastrar.addEventListener("submit", (e) => {
   e.preventDefault();
-  enviar(formCadastrar, "/api/auth/cadastro", { disciplinas: materiasEscolhidas() });
+  enviar(formCadastrar, "/api/auth/cadastro", {
+    disciplinas: materiasEscolhidas(),
+    aceite_privacidade: document.getElementById("cad-aceite-privacidade").checked,
+    declara_maioridade: document.getElementById("cad-maioridade").checked,
+  });
 });
 
 // login.html#cadastrar abre direto no cadastro

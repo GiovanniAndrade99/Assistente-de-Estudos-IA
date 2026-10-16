@@ -3,24 +3,159 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>Aviso de privacidade | Assistente de Estudos</title>
+  <title>Aviso de privacidade · Assistente de Estudos</title>
+  <link rel="stylesheet" href="fontes/fontes.css">
   <link rel="stylesheet" href="login.css">
+  <link rel="stylesheet" href="privacidade.css">
+  <script src="tema.js"></script>
 </head>
-<body class="pagina-login">
-  <main class="lado-form">
-    <h1>Aviso de privacidade e cookies</h1>
-    <p>Este sistema usa dados de conta e de estudo para oferecer login, organizar atividades e responder às solicitações feitas no Assistente de Estudos.</p>
-    <h2>Cookie necessário</h2>
-    <p>O cookie <code>sessao</code> mantém sua autenticação. Ele é HttpOnly, usa SameSite=Lax e expira em até sete dias. Em produção, também exige HTTPS (Secure). O sistema não usa cookies de publicidade ou análise. A preferência de tema e o registro de que este aviso foi lido ficam no armazenamento local do navegador, não em cookies.</p>
-    <h2>Dados tratados</h2>
-    <p>O banco armazena nome, e-mail, hash da senha, sessões e conteúdo criado no sistema, como perguntas, entregas, mensagens e progresso. Senhas não são armazenadas em texto puro. PDFs enviados são guardados na pasta de dados do servidor.</p>
-    <p>Quando recursos de IA são usados, o texto da solicitação e trechos relevantes dos materiais podem ser enviados ao provedor configurado (Google Gemini) para gerar a resposta. Evite incluir dados pessoais ou sensíveis nas perguntas e nos arquivos.</p>
-    <h2>Seus pedidos e contato</h2>
-    <p>Para pedir acesso, correção ou eliminação dos dados, entre em contato com o responsável pelo projeto que disponibilizou este sistema. O operador deve publicar aqui um canal de contato válido antes de disponibilizar o serviço ao público.</p>
-    <h2>Serviços externos</h2>
-    <p>A interface carrega fontes do Google Fonts. Vídeos incorporados usam o domínio youtube-nocookie.com. Esses serviços podem receber dados técnicos da conexão quando os respectivos recursos são carregados.</p>
-    <p><a href="/login.html">Voltar ao login</a></p>
+<body>
+  <main class="aviso">
+    <header class="aviso-topo">
+      <p class="aviso-selo">LGPD · Lei nº 13.709/2018</p>
+      <h1>Aviso de privacidade</h1>
+      <p class="aviso-sub">Como o Assistente de Estudos usa seus dados, por quanto tempo os guarda e como você
+        exerce seus direitos. Versão <strong data-campo="versao">—</strong>.</p>
+      <nav class="aviso-indice" aria-label="Seções">
+        <a href="#quem">Quem trata</a><a href="#idade">Idade mínima</a><a href="#dados">Dados e finalidades</a>
+        <a href="#quem-ve">Quem vê o quê</a><a href="#compartilhamento">Compartilhamento</a>
+        <a href="#retencao">Prazos</a><a href="#direitos">Seus direitos</a><a href="#cookies">Cookies</a>
+        <a href="#seguranca">Segurança</a><a href="#ia">Uso de IA</a>
+      </nav>
+    </header>
+
+    <section id="quem">
+      <h2>Quem trata seus dados</h2>
+      <dl class="ficha">
+        <div><dt>Controlador</dt><dd data-campo="controlador">—</dd></div>
+        <div><dt>Encarregado (DPO)</dt><dd data-campo="encarregado">—</dd></div>
+      </dl>
+      <p class="pendente" id="aviso-config" hidden>O responsável por este servidor ainda não preencheu os dados do
+        controlador. Enquanto isso, use o Suporte do sistema para qualquer pedido sobre seus dados.</p>
+    </section>
+
+    <section id="idade">
+      <h2>Idade mínima</h2>
+      <p>O Assistente de Estudos é para pessoas com <strong data-campo="idade">18</strong> anos ou mais. O cadastro pede
+        essa declaração e guardamos só a data em que ela foi feita, não a sua data de nascimento. O motivo é que o
+        provedor de inteligência artificial que usamos (API Gemini, do Google) só permite o serviço para maiores de 18
+        anos e proíbe o uso em aplicativos voltados ou de acesso provável por menores.</p>
+    </section>
+
+    <section id="dados">
+      <h2>Quais dados usamos e para quê</h2>
+      <div class="tabela-rolavel"><table>
+        <thead><tr><th>Dados</th><th>Para quê</th><th>Base legal (LGPD, art. 7º)</th></tr></thead>
+        <tbody>
+          <tr><td>Conta: nome, e-mail, senha (só o hash), tipo (aluno ou professor), data da ciência deste aviso e da
+            declaração de idade, último acesso</td><td>Criar e manter sua conta e o acesso</td><td>Execução de contrato
+            (V)</td></tr>
+          <tr><td>Estudo: perguntas ao assistente e respostas, simulados e notas, aulas marcadas como estudadas,
+            flashcards salvos e trilha de estudo</td><td>Oferecer as ferramentas de estudo e o acompanhamento pelo
+            professor da disciplina</td><td>Execução de contrato (V)</td></tr>
+          <tr><td>Turma: mensagens do chat da turma, entregas de atividades, eventos e lembretes</td><td>Comunicação e
+            atividades da disciplina</td><td>Execução de contrato (V)</td></tr>
+          <tr><td>Materiais: PDFs enviados pelo professor e o texto extraído deles</td><td>Base das respostas do
+            assistente, resumos, flashcards e simulados</td><td>Execução de contrato (V)</td></tr>
+          <tr><td>Segurança: sessões, pseudônimos (HMAC) de IP e e-mail usados só para limitar tentativas, registros
+            técnicos com o número da sua conta e da requisição (sem IP)</td><td>Proteger contas, evitar abuso e
+            investigar falhas</td><td>Legítimo interesse (IX) e dever de segurança (art. 46)</td></tr>
+          <tr><td>Suporte: chamados que você abre e as respostas</td><td>Atender dúvidas e pedidos, inclusive os de
+            privacidade</td><td>Execução de contrato (V)</td></tr>
+          <tr><td>Métricas: contagens diárias de uso (por exemplo, quantas perguntas foram feitas), sem identificar
+            ninguém</td><td>Entender o uso e melhorar o serviço</td><td>Não são dados pessoais</td></tr>
+        </tbody>
+      </table></div>
+      <p>Não usamos seus dados para publicidade, não vendemos dados e não criamos perfis para anúncios.</p>
+    </section>
+
+    <section id="quem-ve">
+      <h2>Quem vê o quê dentro do sistema</h2>
+      <ul>
+        <li>O <strong>professor da disciplina</strong> vê as perguntas que você fez ao assistente naquela disciplina,
+          com seu nome, suas notas de simulado e suas entregas.</li>
+        <li><strong>Colegas da mesma turma</strong> veem seu nome e suas mensagens no chat da turma. A matrícula nas
+          disciplinas é livre: qualquer pessoa com conta pode se matricular numa disciplina e passar a ver esse chat.</li>
+        <li><strong>Administradores</strong> veem os chamados de suporte com nome e e-mail de quem abriu, para
+          responder.</li>
+        <li>Ninguém vê sua senha: guardamos só um hash dela.</li>
+      </ul>
+    </section>
+
+    <section id="compartilhamento">
+      <h2>Compartilhamento e transferência internacional</h2>
+      <p><strong>Google (API Gemini)</strong>, como operador, recebe o texto dos PDFs da disciplina e as perguntas
+        feitas ao assistente, para gerar respostas, resumos, flashcards e simulados. O Google não recebe seu nome, e-mail
+        nem IP vindos do sistema. Os servidores do Google podem ficar fora do Brasil (transferência internacional, LGPD,
+        art. 33).</p>
+      <p class="destaque" data-campo="plano-ia">—</p>
+      <p data-campo="provedor-email" hidden></p>
+      <p><strong>Vídeos do YouTube</strong> indicados pelo professor tocam pelo domínio youtube-nocookie.com. O YouTube
+        só recebe dados da sua conexão quando você abre a tela de videoaulas de uma disciplina com vídeos.</p>
+      <p>Fontes e ícones da interface são servidos pelo próprio sistema, sem chamar serviços de terceiros.</p>
+    </section>
+
+    <section id="retencao">
+      <h2>Por quanto tempo guardamos</h2>
+      <div class="tabela-rolavel"><table>
+        <thead><tr><th>Dado</th><th>Prazo</th></tr></thead>
+        <tbody id="tabela-retencao">
+          <tr><td>Conta e conteúdo ligado a ela</td><td>Enquanto a conta existir; você pode excluí-la quando quiser</td></tr>
+        </tbody>
+      </table></div>
+      <p>Passado cada prazo, a limpeza automática do sistema apaga os dados. Depois que você exclui a conta, os dados
+        ainda existem nas cópias de segurança até elas vencerem; se uma cópia for restaurada, a exclusão é refeita.</p>
+    </section>
+
+    <section id="direitos">
+      <h2>Seus direitos e como exercê-los</h2>
+      <p>Você pode pedir (LGPD, art. 18): confirmação de que tratamos seus dados; acesso a eles; correção;
+        anonimização, bloqueio ou eliminação do que for desnecessário; portabilidade; eliminação; informação sobre com
+        quem compartilhamos; e revisão de decisões automatizadas.</p>
+      <ul>
+        <li><strong>Sozinho, na hora:</strong> em <em>Configurações › Seus dados</em> você baixa todos os seus dados
+          (arquivo JSON), corrige nome e e-mail e exclui a conta.</li>
+        <li><strong>Pelo Suporte:</strong> abra um chamado na categoria <em>Privacidade e dados pessoais (LGPD)</em>.</li>
+        <li><strong>Pelo encarregado:</strong> <span data-campo="contato-direitos">—</span></li>
+      </ul>
+      <p>Respondemos em até <strong data-campo="prazo">15</strong> dias (art. 19). Se não ficar satisfeito, você pode
+        peticionar à Autoridade Nacional de Proteção de Dados (ANPD), em gov.br/anpd.</p>
+    </section>
+
+    <section id="cookies">
+      <h2>Cookies e armazenamento no navegador</h2>
+      <ul>
+        <li><code>sessao</code> (cookie essencial): mantém você conectado. HttpOnly, SameSite=Lax, seguro (HTTPS) em
+          produção, dura até <span data-campo="sessao-dias">7</span> dias.</li>
+        <li>No armazenamento local do navegador: <code>tema</code> (claro ou escuro), <code>tela</code> e
+          <code>disciplina</code> (onde você parou), <code>aviso-cookies-visto-v1</code> e
+          <code>avisados-&lt;data&gt;</code> (lembretes já mostrados). Ficam só no seu aparelho.</li>
+        <li>Notificações do navegador para lembretes só aparecem se você permitir.</li>
+      </ul>
+      <p>Não usamos cookies de publicidade nem de análise.</p>
+    </section>
+
+    <section id="seguranca">
+      <h2>Segurança e incidentes</h2>
+      <p>Senhas com PBKDF2 e sal individual; sessões guardadas só como hash; HTTPS em produção; política de conteúdo
+        (CSP) contra scripts de terceiros; acesso aos dados de cada turma só para quem participa dela; limites contra
+        tentativas repetidas; cópias de segurança. Se houver um incidente de segurança que possa trazer risco ou dano
+        relevante, comunicaremos a ANPD e as pessoas afetadas em até 3 dias úteis (Resolução CD/ANPD nº 15/2024).</p>
+    </section>
+
+    <section id="ia">
+      <h2>Uso de inteligência artificial</h2>
+      <p>Respostas, resumos, flashcards e simulados são gerados por um modelo de linguagem a partir dos materiais da
+        disciplina e podem conter erros: confira sempre a fonte citada. Simulados são para estudo e não substituem
+        avaliações do professor. Nenhuma decisão automatizada do sistema muda sua situação acadêmica; se discordar de
+        uma correção, peça revisão pelo Suporte.</p>
+    </section>
+
+    <footer class="aviso-rodape">
+      <p>Quando este aviso mudar, a versão acima muda e pediremos que você confirme a leitura no próximo acesso.</p>
+      <p><a href="/">Voltar ao sistema</a> · <a href="/login.html">Entrar</a></p>
+    </footer>
   </main>
+  <script src="privacidade.js"></script>
 </body>
 </html>

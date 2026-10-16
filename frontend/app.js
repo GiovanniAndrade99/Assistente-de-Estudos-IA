@@ -42,6 +42,11 @@ async function chamarApi(url, opcoes = {}) {
     location.href = "/login.html";
     throw new Error("Faça login para continuar.");
   }
+  // O aviso de privacidade mudou durante a sessão: recarrega para pedir a confirmação
+  if (resposta.status === 403 && resposta.headers.get("X-Acao-Necessaria") === "ciencia-privacidade") {
+    location.reload();
+    throw new Error("Confirme o aviso de privacidade para continuar.");
+  }
   const texto = await resposta.text();
   let dados = {};
   try {
@@ -209,8 +214,43 @@ function atualizarAreasDaDisciplina() {
 
 // ---------------------------------------------------------- usuário
 
+// Contas antigas (ou aviso de privacidade atualizado): pede a ciência do aviso e a
+// declaração de idade mínima antes de carregar qualquer dado das disciplinas.
+function pedirCiencia() {
+  const modal = $("modal-ciencia");
+  const form = $("form-ciencia");
+  const status = form.querySelector(".status");
+  $("botao-menor-18").onclick = () => { $("texto-menor-18").hidden = false; };
+  $("botao-sair-menor").onclick = async () => {
+    await postarJson("/api/auth/logout", {});
+    location.href = "/login.html";
+  };
+  modal.addEventListener("cancel", (e) => e.preventDefault());  // Esc não fecha: a confirmação é obrigatória
+  modal.showModal();
+  return new Promise((resolver) => {
+    form.onsubmit = async (evento) => {
+      evento.preventDefault();
+      status.textContent = "";
+      try {
+        await postarJson("/api/conta/ciencia-privacidade", {
+          aceite_privacidade: form.aceite_privacidade.checked,
+          declara_maioridade: form.declara_maioridade.checked,
+        });
+        modal.close();
+        resolver();
+      } catch (erro) {
+        status.textContent = `✖ ${erro.message}`;
+      }
+    };
+  });
+}
+
 async function iniciar() {
   usuario = await chamarApi("/api/auth/eu");
+  if (usuario.ciencia_pendente) {
+    await pedirCiencia();
+    usuario = await chamarApi("/api/auth/eu");
+  }
   mostrarUsuario();
   $("tipo-usuario").classList.add(usuario.tipo);
   for (const el of document.querySelectorAll("[data-so-professor]")) el.hidden = usuario.tipo !== "professor" && !usuario.administrador;

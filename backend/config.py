@@ -51,6 +51,21 @@ RETENCAO_CHAMADOS_MESES = int(os.getenv("RETENCAO_CHAMADOS_MESES", "12"))    # c
 RETENCAO_BACKUP_DIAS = int(os.getenv("RETENCAO_BACKUP_DIAS", "30"))
 INTERVALO_LIMPEZA_HORAS = float(os.getenv("INTERVALO_LIMPEZA_HORAS", "6"))
 
+# Transparência (LGPD, arts. 9º e 41): quem trata os dados e como falar com essa pessoa.
+# Aparecem no aviso de privacidade (/privacidade.html). Obrigatórios em produção.
+CONTROLADOR_NOME = os.getenv("CONTROLADOR_NOME", "")
+CONTROLADOR_CONTATO = os.getenv("CONTROLADOR_CONTATO", "")      # e-mail ou endereço
+ENCARREGADO_NOME = os.getenv("ENCARREGADO_NOME", "")
+ENCARREGADO_EMAIL = os.getenv("ENCARREGADO_EMAIL", "")
+# Mudou o aviso de privacidade? Troque a versão: todos confirmam a leitura de novo.
+POLITICA_PRIVACIDADE_VERSAO = os.getenv("POLITICA_PRIVACIDADE_VERSAO", "2026-10-16")
+# Os termos da API do Gemini exigem 18 anos ou mais e proíbem apps de acesso provável
+# por menores. Só baixe este número se trocar de provedor de IA.
+IDADE_MINIMA = int(os.getenv("IDADE_MINIMA", "18"))
+# true só depois de ativar o faturamento no projeto do Gemini: no plano gratuito o
+# Google pode usar o conteúdo enviado para melhorar produtos, com revisão humana.
+GEMINI_PLANO_PAGO = _bool("GEMINI_PLANO_PAGO", False)
+
 # Origens extras aceitas em requisições que alteram dados (separadas por vírgula),
 # para quando o frontend for servido de outro endereço. A própria origem é sempre aceita.
 ORIGENS_PERMITIDAS = [
@@ -93,5 +108,9 @@ def problemas_de_configuracao() -> list[str]:
     problemas = []
     if not SEGREDO_APP:
         problemas.append("SEGREDO_APP não definido: IPs e e-mails do controle de tentativas ficariam sem segredo fixo.")
+    if not CONTROLADOR_NOME or not CONTROLADOR_CONTATO:
+        problemas.append("CONTROLADOR_NOME e CONTROLADOR_CONTATO são obrigatórios (LGPD, art. 9º).")
+    if IDADE_MINIMA < 18:
+        problemas.append("IDADE_MINIMA abaixo de 18: os termos da API do Gemini não permitem.")
     return problemas
 

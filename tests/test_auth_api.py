@@ -1,3 +1,4 @@
+from apoio import DECLARACOES
 import hashlib
 import logging
 
@@ -11,6 +12,7 @@ def _novo_aluno(client, email="aluna@example.test"):
         "email": email,
         "senha": "senha-segura-123",
         "tipo": "aluno",
+        **DECLARACOES,
     })
 
 
@@ -85,6 +87,7 @@ def test_cadastro_de_professor_exige_codigo_configurado(client, monkeypatch):
         "email": "professor@example.test",
         "senha": "senha-segura-123",
         "tipo": "professor",
+        **DECLARACOES,
         "codigo_professor": "incorreto",
     }
     assert client.post("/api/auth/cadastro", json=dados).status_code == 403

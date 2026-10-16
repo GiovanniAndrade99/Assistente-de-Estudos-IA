@@ -17,6 +17,7 @@ import logging
 import re
 import secrets
 import sqlite3
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 
@@ -82,11 +83,55 @@ def usuario_da_sessao(token: str | None) -> dict | None:
     if not token:
         return None
     return db.consultar_um(
-        """SELECT u.id, u.nome, u.email, u.tipo, u.administrador FROM sessoes s
-           JOIN usuarios u ON u.id = s.usuario_id
-           WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP""",
+        """SELECT u.id, u.nome, u.email, u.tipo, u.administrador, u.aceite_privacidade_versao,
+                  u.maioridade_declarada_em, u.email_verificado_em, u.ultimo_acesso
+           FROM sessoes s JOIN usuarios u ON u.id = s.usuario_id
+           WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP AND u.sistema = 0""",
         (hash_token(token),),
     )
+
+
+def ciencia_pendente(usuario: dict) -> bool:
+    """Falta confirmar a leitura da versão atual do aviso ou a idade mínima."""
+    return (usuario.get("aceite_privacidade_versao") != config.POLITICA_PRIVACIDADE_VERSAO
+            or not usuario.get("maioridade_declarada_em"))
+
+
+def perfil_publico(usuario: dict) -> dict:
+    """O que o frontend recebe sobre a própria conta."""
+    return {
+        "id": usuario["id"], "nome": usuario["nome"], "email": usuario["email"], "tipo": usuario["tipo"],
+        "administrador": usuario.get("administrador", 0),
+        "ciencia_pendente": ciencia_pendente(usuario),
+        "email_verificado": bool(usuario.get("email_verificado_em")),
+    }
+
+
+def registrar_acesso(usuario: dict) -> None:
+    """Guarda o último acesso (no máximo uma escrita por hora): base da contagem de
+    usuários ativos nas métricas e de uma futura regra para contas inativas."""
+    ultimo = usuario.get("ultimo_acesso")
+    limite = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    if ultimo is None or ultimo < limite:
+        db.executar("UPDATE usuarios SET ultimo_acesso = CURRENT_TIMESTAMP WHERE id = ?", (usuario["id"],))
+
+
+def registrar_ciencia(usuario_id: int) -> None:
+    db.executar(
+        """UPDATE usuarios SET aceite_privacidade_versao = ?, aceite_privacidade_em = CURRENT_TIMESTAMP,
+                  maioridade_declarada_em = CURRENT_TIMESTAMP WHERE id = ?""",
+        (config.POLITICA_PRIVACIDADE_VERSAO, usuario_id),
+    )
+    logger.info("ciencia_privacidade", extra={"usuario_id": usuario_id, "versao": config.POLITICA_PRIVACIDADE_VERSAO})
+
+
+def exigir_declaracoes(aceite_privacidade: bool, declara_maioridade: bool) -> None:
+    if not aceite_privacidade:
+        raise HTTPException(400, "Para criar a conta, confirme que leu o aviso de privacidade.")
+    if not declara_maioridade:
+        raise HTTPException(
+            400, f"O Assistente de Estudos é só para quem tem {config.IDADE_MINIMA} anos ou mais.",
+        )
 
 
 def encerrar_sessao(token: str) -> None:
@@ -103,7 +148,7 @@ def encerrar_outras_sessoes(usuario_id: int, token_atual: str) -> None:
 
 def cadastrar(
     nome: str, email: str, senha: str, tipo: str, ip: str = "desconhecido", codigo_professor: str = "",
-    disciplina_ids: list[int] | None = None,
+    disciplina_ids: list[int] | None = None, aceite_privacidade: bool = False, declara_maioridade: bool = False,
 ) -> tuple[dict, str, int]:
     # Limite por IP (não por e-mail): evita que um script crie muitas contas
     # trocando de e-mail a cada tentativa. O IP entra só como pseudônimo.
@@ -117,6 +162,7 @@ def cadastrar(
         raise HTTPException(400, "A senha precisa ter entre 10 e 128 caracteres.")
     if tipo not in ("aluno", "professor"):
         raise HTTPException(400, "Tipo deve ser 'aluno' ou 'professor'.")
+    exigir_declaracoes(aceite_privacidade, declara_maioridade)
     # Sem isso, qualquer visitante marcaria "Professor" na tela de cadastro e
     # ganharia o painel do professor. Só quem recebeu o código (config.py/.env)
     # pode criar conta desse tipo.
@@ -130,8 +176,10 @@ def cadastrar(
 
     try:
         usuario_id = db.executar(
-            "INSERT INTO usuarios (nome, email, senha_hash, tipo) VALUES (?, ?, ?, ?)",
-            (nome, email, gerar_hash_senha(senha), tipo),
+            """INSERT INTO usuarios (nome, email, senha_hash, tipo, aceite_privacidade_versao,
+                                     aceite_privacidade_em, maioridade_declarada_em)
+               VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)""",
+            (nome, email, gerar_hash_senha(senha), tipo, config.POLITICA_PRIVACIDADE_VERSAO),
         )
     except sqlite3.IntegrityError as erro:  # dois cadastros simultâneos com o mesmo e-mail
         raise HTTPException(400, "Este e-mail já está cadastrado. Entre na conta ou use outro e-mail.") from erro
@@ -139,7 +187,8 @@ def cadastrar(
         disciplinas_service.matricular(usuario_id, disciplina_ids)
     token, duracao = _iniciar_sessao(usuario_id)
     logger.info("usuario_cadastrado", extra={"usuario_id": usuario_id, "tipo": tipo})
-    return {"id": usuario_id, "nome": nome, "email": email, "tipo": tipo, "administrador": 0}, token, duracao
+    usuario = db.consultar_um("SELECT * FROM usuarios WHERE id = ?", (usuario_id,))
+    return perfil_publico(usuario), token, duracao
 
 
 _hash_ficticio: str | None = None
@@ -158,7 +207,7 @@ def entrar(email: str, senha: str, ip: str = "desconhecido") -> tuple[dict, str,
     email = email.strip().lower()
     limite_service.limitar(pseudonimo.chave("ip", ip), "login", config.LIMITE_LOGINS_POR_IP, 15)
     _verificar_rate_limit(email)
-    usuario = db.consultar_um("SELECT * FROM usuarios WHERE email = ?", (email,))
+    usuario = db.consultar_um("SELECT * FROM usuarios WHERE email = ? AND sistema = 0", (email,))
     if not usuario:
         _conferir_senha_de_conta_inexistente(senha)
     # Mesma mensagem para e-mail ou senha errados: não revela quais e-mails existem
@@ -174,7 +223,7 @@ def entrar(email: str, senha: str, ip: str = "desconhecido") -> tuple[dict, str,
         )
     token, duracao = _iniciar_sessao(usuario["id"])
     logger.info("login_ok", extra={"usuario_id": usuario["id"]})
-    return {k: usuario[k] for k in ("id", "nome", "email", "tipo", "administrador")}, token, duracao
+    return perfil_publico(usuario), token, duracao
 
 
 # ---------------------------------------------------------------- conta
@@ -184,7 +233,7 @@ def atualizar_perfil(usuario: dict, nome: str) -> dict:
     if not nome:
         raise HTTPException(400, "Informe seu nome.")
     db.executar("UPDATE usuarios SET nome = ? WHERE id = ?", (nome, usuario["id"]))
-    return {**usuario, "nome": nome}
+    return perfil_publico({**usuario, "nome": nome})
 
 
 def trocar_senha(usuario: dict, senha_atual: str, nova_senha: str, token_atual: str) -> None:

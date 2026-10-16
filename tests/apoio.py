@@ -22,14 +22,24 @@ def criar_usuario(
     nome: str = "Pessoa de Teste",
     senha: str = SENHA_PADRAO,
     administrador: bool = False,
+    ciente: bool = True,
 ) -> int:
-    """Cria a conta direto no banco (sem passar pelo limite de cadastro por IP)."""
+    """Cria a conta direto no banco (sem passar pelo limite de cadastro por IP).
+    `ciente=True`: já confirmou o aviso de privacidade atual e a idade mínima."""
+    from backend import config
     from backend.infraestrutura import db
 
-    return db.executar(
+    usuario_id = db.executar(
         "INSERT INTO usuarios (nome, email, senha_hash, tipo, administrador) VALUES (?, ?, ?, ?, ?)",
         (nome, email, _hash_da_senha(senha), tipo, int(administrador)),
     )
+    if ciente:
+        db.executar(
+            """UPDATE usuarios SET aceite_privacidade_versao = ?, aceite_privacidade_em = CURRENT_TIMESTAMP,
+                      maioridade_declarada_em = CURRENT_TIMESTAMP WHERE id = ?""",
+            (config.POLITICA_PRIVACIDADE_VERSAO, usuario_id),
+        )
+    return usuario_id
 
 
 def entrar(client: TestClient, email: str, senha: str = SENHA_PADRAO):
@@ -60,3 +70,8 @@ def vetor_do_texto(texto: str, dimensoes: int = 64) -> list[float]:
     if not vetor.any():
         vetor[0] = 1.0
     return vetor.tolist()
+
+
+# Campos obrigatórios do cadastro pela API (ciência do aviso e idade mínima)
+DECLARACOES = {"aceite_privacidade": True, "declara_maioridade": True}
+

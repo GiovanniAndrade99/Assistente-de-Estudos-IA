@@ -22,8 +22,9 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .api import (
-    auth_router, chat_router, disciplinas_router, documentos_router, estudo_router,
-    ia_router, professor_router, progresso_router, saude_router, suporte_router, turma_router,
+    auth_router, chat_router, conta_router, disciplinas_router, documentos_router, estudo_router,
+    ia_router, privacidade_router, professor_router, progresso_router, saude_router, suporte_router,
+    turma_router,
 )
 from .aplicacao import demo_service, retencao_service
 from .excecoes import registrar_handlers
@@ -43,6 +44,8 @@ ROUTERS = (
     progresso_router.router,
     suporte_router.router,
     ia_router.router,
+    privacidade_router.router,
+    conta_router.router,
 )
 
 

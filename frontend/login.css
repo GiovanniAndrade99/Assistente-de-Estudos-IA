@@ -241,3 +241,9 @@ button, input { font: inherit; color: inherit; }
   /* Sem girar, mas cada ícone mantém sua posição no círculo (senão todos colapsam no centro) */
   .icone-orbita { transform: rotate(var(--angulo)) translateY(calc(var(--raio) * 1px)) rotate(calc(var(--angulo) * -1)); }
 }
+
+/* Declarações obrigatórias do cadastro (aviso de privacidade e idade mínima) */
+.declaracoes { gap: 10px; }
+.caixa-declaracao { display: flex; gap: 10px; align-items: flex-start; font: 400 14px/1.5 var(--font-body); color: var(--ink-2); cursor: pointer; }
+.caixa-declaracao input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--primary); }
+.caixa-declaracao a { color: var(--primary); }

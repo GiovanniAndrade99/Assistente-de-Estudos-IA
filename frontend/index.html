@@ -81,7 +81,7 @@
           <button type="button" data-tela="painel" data-so-professor hidden><svg><use href="#i-grafico"/></svg><span>Painel da turma</span></button>
           <h2>Ajuda</h2>
           <button type="button" data-tela="sobre-ia"><svg><use href="#i-brilho"/></svg><span>Sobre o assistente IA</span></button>
-          <button type="button" data-tela="parcerias"><svg><use href="#i-formatura"/></svg><span>Parcerias com universidades</span></button>
+          <button type="button" data-tela="parcerias"><svg><use href="#i-formatura"/></svg><span>Universidades e vestibulares</span></button>
           <button type="button" data-tela="suporte"><svg><use href="#i-ajuda"/></svg><span>Suporte</span></button>
         </nav>
 
@@ -91,6 +91,8 @@
             <svg><use href="#i-upload"/></svg> Enviar PDF
             <input type="file" id="input-pdf" accept=".pdf" multiple hidden>
           </label>
+          <p class="dica aviso-upload" data-so-professor hidden>Não envie PDFs com dados pessoais de outras
+            pessoas (listas de chamada, notas, documentos). O texto vai para o provedor de IA.</p>
           <p id="status-upload" class="status"></p>
           <ul id="lista-documentos"></ul>
         </section>
@@ -346,15 +348,17 @@
       <header class="cabecalho-pagina">
         <span class="icone-pagina"><svg><use href="#i-formatura"/></svg></span>
         <div>
-          <h2>Parcerias com universidades</h2>
-          <p>Universidades conhecidas com curso de TI: nota do MEC e inscrições do vestibular.</p>
+          <h2>Universidades e vestibulares</h2>
+          <p>Informativo: cursos de TI de universidades conhecidas, nota do MEC e formas de ingresso. Não há parceria
+            formal com essas instituições.</p>
         </div>
       </header>
 
       <section class="hero-parcerias">
-        <span class="hero-selo">🎓 Rumo à graduação em TI</span>
-        <h3>Encontre a universidade certa para o seu futuro em tecnologia</h3>
-        <p>Compare a nota do MEC, veja os cursos de TI e acompanhe as inscrições dos principais vestibulares do país.</p>
+        <span class="hero-selo">🎓 Cursos de TI pelo país</span>
+        <h3>Compare cursos de tecnologia de universidades conhecidas</h3>
+        <p>Nota do MEC, forma de ingresso e datas de inscrição, úteis para transferência, segunda graduação ou para
+          indicar a colegas.</p>
         <div id="resumo-parcerias" class="resumo-parcerias"></div>
       </section>
 
@@ -557,6 +561,33 @@
 
   <!-- Avisos de lembretes na hora marcada (aparecem em qualquer tela) -->
   <div id="avisos" class="avisos" aria-live="polite"></div>
+
+  <!-- Ciência do aviso de privacidade e idade mínima (contas criadas antes da regra ou aviso atualizado) -->
+  <dialog id="modal-ciencia" class="modal-ciencia" aria-labelledby="titulo-ciencia">
+    <form id="form-ciencia">
+      <h2 id="titulo-ciencia">Antes de continuar</h2>
+      <p>O aviso de privacidade foi atualizado ou ainda falta confirmar a idade mínima. Leia o aviso e confirme
+        para seguir usando o Assistente de Estudos.</p>
+      <label class="caixa-declaracao"><input type="checkbox" name="aceite_privacidade">
+        <span>Li o <a href="/privacidade.html" target="_blank" rel="noopener">aviso de privacidade</a>.</span></label>
+      <label class="caixa-declaracao"><input type="checkbox" name="declara_maioridade">
+        <span>Tenho 18 anos ou mais.</span></label>
+      <p class="status" role="alert"></p>
+      <div class="linha-botoes">
+        <button type="submit" class="botao-primario">Continuar</button>
+        <button type="button" id="botao-menor-18" class="botao-secundario">Tenho menos de 18 anos</button>
+      </div>
+      <div id="texto-menor-18" class="menor-18" hidden>
+        <p>O Assistente de Estudos é só para quem tem 18 anos ou mais, porque o provedor de IA que usamos não permite
+          o uso por menores. Você pode baixar seus dados e excluir a conta agora.</p>
+        <div class="linha-botoes">
+          <a class="botao-secundario" href="/api/conta/meus-dados" download>Baixar meus dados</a>
+          <button type="button" id="botao-excluir-menor" class="botao-perigo" hidden>Excluir minha conta</button>
+          <button type="button" id="botao-sair-menor" class="botao-secundario">Sair</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
 
   <script src="app.js"></script>
   <script src="disciplinas.js"></script>

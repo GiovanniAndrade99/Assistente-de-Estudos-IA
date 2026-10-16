@@ -28,6 +28,8 @@ class Cadastro(BaseModel):
     tipo: str
     codigo_professor: str = Field(default="", max_length=128)
     disciplinas: list[int] = []
+    aceite_privacidade: bool = False   # "Li o aviso de privacidade"
+    declara_maioridade: bool = False   # "Tenho 18 anos ou mais"
 
 
 class Login(BaseModel):
@@ -40,6 +42,7 @@ def cadastrar(dados: Cadastro, request: Request, resposta: Response):
     ip = request.client.host if request.client else "desconhecido"
     usuario, token, duracao = auth_service.cadastrar(
         dados.nome, dados.email, dados.senha, dados.tipo, ip, dados.codigo_professor, dados.disciplinas,
+        dados.aceite_privacidade, dados.declara_maioridade,
     )
     _definir_cookie(resposta, token, duracao)
     return usuario
@@ -64,7 +67,7 @@ def sair(request: Request, resposta: Response):
 
 @router.get("/eu")
 def eu(usuario: dict = Depends(usuario_atual)):
-    return usuario
+    return auth_service.perfil_publico(usuario)
 
 
 # ---------------------------------------------------------------- configurações da conta
