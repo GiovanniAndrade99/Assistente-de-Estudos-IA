@@ -3,12 +3,13 @@
 Rotas ficam finas: só leem a requisição, chamam a camada de aplicação
 (aplicacao/auth_service.py) e devolvem a resposta HTTP.
 """
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from pydantic import BaseModel, Field
 
 from .. import config
-from ..aplicacao import auth_service
+from ..aplicacao import auth_service, links_conta_service
 from ..aplicacao.auth_service import NOME_COOKIE
+from ..infraestrutura import correio
 from .dependencias import usuario_atual
 
 router = APIRouter(prefix="/api/auth")
@@ -38,14 +39,53 @@ class Login(BaseModel):
 
 
 @router.post("/cadastro")
-def cadastrar(dados: Cadastro, request: Request, resposta: Response):
+def cadastrar(dados: Cadastro, request: Request, resposta: Response, tarefas: BackgroundTasks):
     ip = request.client.host if request.client else "desconhecido"
     usuario, token, duracao = auth_service.cadastrar(
         dados.nome, dados.email, dados.senha, dados.tipo, ip, dados.codigo_professor, dados.disciplinas,
         dados.aceite_privacidade, dados.declara_maioridade,
     )
     _definir_cookie(resposta, token, duracao)
+    if correio.disponivel():
+        links_conta_service.enviar_verificacao(usuario, tarefas)
     return usuario
+
+
+class PedidoRedefinicao(BaseModel):
+    email: str = Field(max_length=254)
+
+
+class Redefinicao(BaseModel):
+    token: str = Field(max_length=200)
+    nova_senha: str = Field(min_length=10, max_length=128)
+
+
+class TokenDeEmail(BaseModel):
+    token: str = Field(max_length=200)
+
+
+@router.post("/esqueci-senha")
+def esqueci_senha(dados: PedidoRedefinicao, request: Request, tarefas: BackgroundTasks):
+    ip = request.client.host if request.client else "desconhecido"
+    links_conta_service.solicitar_redefinicao(dados.email, ip, tarefas)
+    return {"ok": True, "mensagem": "Se houver uma conta com esse e-mail, enviamos um link para criar uma senha nova."}
+
+
+@router.post("/redefinir-senha")
+def redefinir_senha(dados: Redefinicao):
+    links_conta_service.redefinir_senha(dados.token, dados.nova_senha)
+    return {"ok": True}
+
+
+@router.post("/confirmar-email")
+def confirmar_email(dados: TokenDeEmail):
+    return {"ok": True, "resultado": links_conta_service.confirmar_email(dados.token)}
+
+
+@router.post("/reenviar-verificacao")
+def reenviar_verificacao(tarefas: BackgroundTasks, usuario: dict = Depends(usuario_atual)):
+    links_conta_service.reenviar_verificacao(usuario, tarefas)
+    return {"ok": True}
 
 
 @router.post("/login")

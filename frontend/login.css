@@ -247,3 +247,14 @@ button, input { font: inherit; color: inherit; }
 .caixa-declaracao { display: flex; gap: 10px; align-items: flex-start; font: 400 14px/1.5 var(--font-body); color: var(--ink-2); cursor: pointer; }
 .caixa-declaracao input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; accent-color: var(--primary); }
 .caixa-declaracao a { color: var(--primary); }
+
+/* Páginas simples (redefinir senha, confirmar e-mail) */
+.pagina-simples { min-height: 100dvh; display: grid; place-items: center; padding: 32px 20px; }
+.pagina-simples .cartao-login { max-width: 420px; }
+.pagina-simples form, .bloco-simples { display: flex; flex-direction: column; gap: 18px; }
+.pagina-simples h2 { margin: 0; font: 600 26px var(--font-display); color: var(--ink); }
+.ok-geral { margin: 0; font-size: .875rem; color: var(--success); }
+.ok-geral:empty { display: none; }
+.rodape-simples { margin: 0; font-size: 14px; color: var(--ink-3); }
+.rodape-simples a, .link-esqueci { color: var(--primary); }
+.link-esqueci { align-self: flex-end; font-size: 13px; }

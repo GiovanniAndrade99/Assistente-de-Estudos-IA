@@ -16,6 +16,7 @@ def dados_publicos() -> dict:
         "encarregado": {"nome": config.ENCARREGADO_NOME or None, "email": config.ENCARREGADO_EMAIL or None},
         "idade_minima": config.IDADE_MINIMA,
         "provedor_ia": {"nome": "Google (API Gemini)", "plano_pago": config.GEMINI_PLANO_PAGO},
+        "provedor_email": (config.SMTP_PROVEDOR_NOME or "um provedor de e-mail") if config.SMTP_HOST else None,
         "prazo_resposta_dias": PRAZO_RESPOSTA_DIAS,
         "retencao": {
             "sessao_dias": config.DURACAO_SESSAO_SEGUNDOS // 86400,

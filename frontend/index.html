@@ -562,6 +562,17 @@
           <p class="dica">Baixe tudo o que o sistema guarda sobre você, num arquivo JSON, ou exclua sua conta.
             Outros pedidos: Suporte, categoria "Privacidade e dados pessoais (LGPD)".</p>
           <a class="botao-secundario" href="/api/conta/meus-dados" download>Baixar meus dados</a>
+          <form id="form-trocar-email" class="form-excluir-conta">
+            <h4 class="titulo-neutro">Trocar e-mail</h4>
+            <p class="dica" id="situacao-email"></p>
+            <label>Novo e-mail <input type="email" name="novo_email" autocomplete="email" required maxlength="254"></label>
+            <label>Sua senha <input type="password" name="senha" autocomplete="current-password" required maxlength="128"></label>
+            <div class="linha-botoes">
+              <button type="submit" class="botao-secundario">Enviar confirmação</button>
+              <button type="button" id="reenviar-verificacao" class="botao-secundario" hidden>Reenviar confirmação do e-mail atual</button>
+            </div>
+            <p class="status" role="status"></p>
+          </form>
           <form id="form-excluir-conta" class="form-excluir-conta">
             <h4>Excluir minha conta</h4>
             <p class="dica">Apaga sua conta, perguntas, notas, mensagens, entregas e lembretes. Disciplinas que você

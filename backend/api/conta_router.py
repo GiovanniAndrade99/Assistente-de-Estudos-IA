@@ -3,11 +3,11 @@ direitos do titular. Ficam liberadas mesmo antes da ciência (dependencias.py)."
 import json
 from datetime import date
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Response
 from pydantic import BaseModel, Field
 
 from .. import config
-from ..aplicacao import auth_service, conta_service, limite_service
+from ..aplicacao import auth_service, conta_service, limite_service, links_conta_service
 from ..aplicacao.auth_service import NOME_COOKIE
 from .dependencias import usuario_atual
 
@@ -17,6 +17,11 @@ router = APIRouter(prefix="/api/conta")
 class Ciencia(BaseModel):
     aceite_privacidade: bool = False
     declara_maioridade: bool = False
+
+
+class TrocaEmail(BaseModel):
+    novo_email: str = Field(max_length=254)
+    senha: str = Field(max_length=128)
 
 
 class Exclusao(BaseModel):
@@ -40,6 +45,12 @@ def baixar_meus_dados(usuario: dict = Depends(usuario_atual)):
         media_type="application/json; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="meus-dados-{date.today().isoformat()}.json"'},
     )
+
+
+@router.put("/email")
+def trocar_email(dados: TrocaEmail, tarefas: BackgroundTasks, usuario: dict = Depends(usuario_atual)):
+    links_conta_service.solicitar_troca_email(usuario, dados.novo_email, dados.senha, tarefas)
+    return {"ok": True, "mensagem": "Enviamos um link para o novo e-mail. A troca vale depois que você confirmar por lá."}
 
 
 @router.delete("")

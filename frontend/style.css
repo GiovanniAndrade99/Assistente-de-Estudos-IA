@@ -1271,3 +1271,5 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 .msg-turma .apagar-msg { margin-left: 8px; padding: 0 4px; border: 0; background: none; color: var(--ink-3);
   cursor: pointer; font-size: .75rem; }
 .msg-turma .apagar-msg:hover { color: var(--danger); }
+
+.form-excluir-conta h4.titulo-neutro { color: var(--ink); }

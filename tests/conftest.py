@@ -97,3 +97,16 @@ def gemini_falso(monkeypatch):
     monkeypatch.setattr(rag, "gerar_embeddings", gerar_embeddings)
     monkeypatch.setattr(rag, "gerar_conteudo", gerar_conteudo)
     return falso
+
+
+@pytest.fixture
+def caixa_de_email(monkeypatch):
+    """SMTP "configurado", mas as mensagens ficam numa lista em vez de sair."""
+    from backend import config
+    from backend.infraestrutura import correio
+
+    enviados = []
+    monkeypatch.setattr(config, "SMTP_HOST", "smtp.teste")
+    monkeypatch.setattr(config, "SMTP_REMETENTE", "nao-responda@escola.test")
+    monkeypatch.setattr(correio, "_enviar_smtp", enviados.append)
+    return enviados

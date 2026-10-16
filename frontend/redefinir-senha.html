@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <title>Redefinir senha · Assistente de Estudos</title>
+  <link rel="stylesheet" href="fontes/fontes.css">
+  <link rel="stylesheet" href="login.css">
+  <script src="tema.js"></script>
+</head>
+<body>
+  <main class="pagina-simples">
+    <section class="cartao-login">
+      <form id="form-pedir" novalidate>
+        <h2>Esqueci minha senha</h2>
+        <p class="subtitulo">Informe o e-mail da conta. Enviaremos um link para criar uma senha nova.</p>
+        <div class="campo">
+          <label for="pedir-email">E-mail</label>
+          <input type="email" id="pedir-email" name="email" autocomplete="email" placeholder="seu@email.com" required maxlength="254">
+        </div>
+        <p class="erro-geral" role="alert"></p>
+        <p class="ok-geral" role="status"></p>
+        <button type="submit" class="botao-entrar">Enviar link</button>
+      </form>
+
+      <form id="form-nova-senha" novalidate hidden>
+        <h2>Criar senha nova</h2>
+        <p class="subtitulo">Depois de salvar, todas as sessões abertas da conta são encerradas.</p>
+        <div class="campo">
+          <label for="nova-senha">Nova senha</label>
+          <input type="password" id="nova-senha" name="nova_senha" autocomplete="new-password"
+            placeholder="Entre 10 e 128 caracteres" minlength="10" maxlength="128" required>
+        </div>
+        <div class="campo">
+          <label for="confirmar-senha">Repita a nova senha</label>
+          <input type="password" id="confirmar-senha" name="confirmar" autocomplete="new-password" maxlength="128" required>
+        </div>
+        <p class="erro-geral" role="alert"></p>
+        <p class="ok-geral" role="status"></p>
+        <button type="submit" class="botao-entrar">Salvar senha nova</button>
+      </form>
+      <p class="rodape-simples"><a href="/login.html">Voltar ao login</a> · <a href="/privacidade.html">Privacidade</a></p>
+    </section>
+  </main>
+  <script src="redefinir-senha.js"></script>
+</body>
+</html>

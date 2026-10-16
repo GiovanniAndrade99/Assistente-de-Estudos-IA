@@ -66,6 +66,18 @@ IDADE_MINIMA = int(os.getenv("IDADE_MINIMA", "18"))
 # Google pode usar o conteúdo enviado para melhorar produtos, com revisão humana.
 GEMINI_PLANO_PAGO = _bool("GEMINI_PLANO_PAGO", False)
 
+# E-mail transacional (confirmação de e-mail, recuperação e troca de senha). Qualquer
+# provedor SMTP serve. Sem SMTP_HOST: em desenvolvimento o link vai só para o log;
+# em produção esses recursos respondem 503.
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORTA = int(os.getenv("SMTP_PORTA", "587"))        # 587 = STARTTLS; 465 = SSL direto
+SMTP_USUARIO = os.getenv("SMTP_USUARIO", "")
+SMTP_SENHA = os.getenv("SMTP_SENHA", "")
+SMTP_REMETENTE = os.getenv("SMTP_REMETENTE", "")
+SMTP_PROVEDOR_NOME = os.getenv("SMTP_PROVEDOR_NOME", "")  # aparece no aviso de privacidade (operador)
+# Endereço público do site, usado nos links dos e-mails
+APP_URL_BASE = os.getenv("APP_URL_BASE", "http://localhost:8002").rstrip("/")
+
 # Origens extras aceitas em requisições que alteram dados (separadas por vírgula),
 # para quando o frontend for servido de outro endereço. A própria origem é sempre aceita.
 ORIGENS_PERMITIDAS = [

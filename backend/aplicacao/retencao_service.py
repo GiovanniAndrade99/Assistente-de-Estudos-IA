@@ -22,6 +22,9 @@ def _regras() -> list[tuple[str, str, tuple]]:
         ("tentativas_login", "DELETE FROM tentativas_login WHERE criado_em <= datetime('now', ?)",
          (f"-{config.JANELA_TENTATIVAS_LOGIN_MINUTOS} minutes",)),
         ("limites_de_uso", "DELETE FROM limite_uso WHERE criado_em <= datetime('now', '-1 day')", ()),
+        # Links de e-mail usados ou vencidos (o de troca guarda o novo e-mail)
+        ("links_de_conta", "DELETE FROM tokens_conta WHERE expires_at <= datetime('now', '-1 day') "
+                           "OR usado_em <= datetime('now', '-1 day')", ()),
     ]
     if config.RETENCAO_HISTORICO_MESES > 0:
         prazo = (meses(config.RETENCAO_HISTORICO_MESES),)

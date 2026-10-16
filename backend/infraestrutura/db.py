@@ -165,6 +165,18 @@ CREATE TABLE IF NOT EXISTS matriculas (
     criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (aluno_id, disciplina_id)
 );
+
+-- Links enviados por e-mail (redefinir senha, confirmar e-mail, trocar e-mail). Guarda só
+-- o hash do token, que vale uma vez e expira. `dado` é o novo e-mail, na troca.
+CREATE TABLE IF NOT EXISTS tokens_conta (
+    token_hash  TEXT PRIMARY KEY,
+    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo        TEXT NOT NULL CHECK (tipo IN ('redefinir_senha', 'verificar_email', 'trocar_email')),
+    dado        TEXT,
+    expires_at  TEXT NOT NULL,
+    usado_em    TEXT,
+    criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as

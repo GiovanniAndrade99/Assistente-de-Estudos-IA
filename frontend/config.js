@@ -12,6 +12,8 @@ TELAS.config = {
     for (const radio of document.querySelectorAll("input[name=tema]")) radio.checked = radio.value === tema;
     for (const status of document.querySelectorAll("#tela-config .status")) status.textContent = "";
     if (usuario.administrador) carregarSemProfessor();
+    $("situacao-email").textContent = `E-mail atual: ${usuario.email}${usuario.email_verificado ? " (confirmado)" : ", ainda não confirmado"}. A troca só vale depois de confirmada no endereço novo.`;
+    $("reenviar-verificacao").hidden = Boolean(usuario.email_verificado);
   },
 };
 
@@ -114,3 +116,30 @@ async function carregarSemProfessor() {
     lista.appendChild(item);
   }
 }
+
+$("form-trocar-email").addEventListener("submit", async (evento) => {
+  evento.preventDefault();
+  const form = evento.target;
+  const status = form.querySelector(".status");
+  try {
+    const r = await chamarApi("/api/conta/email", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dadosDoForm(form)),
+    });
+    form.reset();
+    status.textContent = `✔ ${r.mensagem}`;
+  } catch (erro) {
+    status.textContent = `✖ ${erro.message}`;
+  }
+});
+
+$("reenviar-verificacao").onclick = async () => {
+  const status = $("form-trocar-email").querySelector(".status");
+  try {
+    await postarJson("/api/auth/reenviar-verificacao", {});
+    status.textContent = "✔ Enviamos um novo link de confirmação para o seu e-mail.";
+  } catch (erro) {
+    status.textContent = `✖ ${erro.message}`;
+  }
+};
