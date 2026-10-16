@@ -27,6 +27,9 @@ def _regras() -> list[tuple[str, str, tuple]]:
         # Simulados gerados e nunca respondidos
         ("simulados_abandonados", "DELETE FROM simulados WHERE finalizado_em IS NULL "
                                   "AND criado_em <= datetime('now', '-7 days')", ()),
+        # Cache de respostas da IA (sem dado de quem perguntou) depois da validade
+        ("cache_de_respostas", "DELETE FROM cache_respostas WHERE criado_em <= datetime('now', ?)",
+         (f"-{max(config.CACHE_RESPOSTAS_DIAS, 0)} days",)),
         # Links de e-mail usados ou vencidos (o de troca guarda o novo e-mail)
         ("links_de_conta", "DELETE FROM tokens_conta WHERE expires_at <= datetime('now', '-1 day') "
                            "OR usado_em <= datetime('now', '-1 day')", ()),

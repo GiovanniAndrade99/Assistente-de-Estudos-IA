@@ -10,7 +10,7 @@ from fastapi import HTTPException, UploadFile
 
 from .. import config
 from ..infraestrutura import db, metricas, rag
-from . import indexacao_service, limite_service
+from . import custo_service, indexacao_service, limite_service
 from .disciplinas_service import disciplina_ou_404
 
 _TAMANHO_CHUNK = 1024 * 1024  # 1 MiB por leitura
@@ -61,7 +61,7 @@ def _ler_com_limite(arquivo: UploadFile, limite_mb: int) -> bytes:
 
 def enviar_documento(disciplina_id: int, arquivo: UploadFile, usuario_id: int) -> dict:
     disciplina_ou_404(disciplina_id)
-    limite_service.limitar(f"usuario:{usuario_id}", "upload_documento", limite=10, janela_minutos=5)
+    limite_service.limitar(f"usuario:{usuario_id}", "upload_documento", config.LIMITE_UPLOADS_5MIN, janela_minutos=5)
     nome = nome_seguro(arquivo.filename or "")
     if not nome.lower().endswith(".pdf"):
         raise HTTPException(400, "Envie um arquivo .pdf")
@@ -101,6 +101,8 @@ def remover_documento(disciplina_id: int, arquivo: str) -> None:
     nome = nome_seguro(arquivo)
     # Com a trava, uma indexação em andamento não devolve os trechos ao índice depois
     with indexacao_service.TRAVA_DOCUMENTOS:
-        db.executar("DELETE FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, nome))
+        with db.conectar() as c:
+            c.execute("DELETE FROM documentos WHERE disciplina_id = ? AND arquivo = ?", (disciplina_id, nome))
+            custo_service.invalidar_disciplina(c, disciplina_id)
         rag.remover_documento(disciplina_id, nome)
         rag.caminho_do_pdf(disciplina_id, nome).unlink(missing_ok=True)

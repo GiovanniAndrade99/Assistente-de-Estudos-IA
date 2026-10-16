@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from ..infraestrutura import db
 
 
-def limitar(chave: str, rota: str, limite: int, janela_minutos: int) -> None:
+def limitar(chave: str, rota: str, limite: int, janela_minutos: int, mensagem: str | None = None) -> None:
     """Levanta 429 se `chave` (usuário ou IP) já fez `limite` requisições a
     `rota` nos últimos `janela_minutos`. Senão, registra esta requisição.
     """
@@ -25,7 +25,7 @@ def limitar(chave: str, rota: str, limite: int, janela_minutos: int) -> None:
         ).fetchone()["n"]
         if total >= limite:
             raise HTTPException(
-                429, "Muitas requisições. Tente novamente em alguns minutos.",
+                429, mensagem or "Muitas requisições. Tente novamente em alguns minutos.",
                 headers={"Retry-After": str(janela_minutos * 60)},
             )
         c.execute("INSERT INTO limite_uso (chave, rota) VALUES (?, ?)", (chave, rota))

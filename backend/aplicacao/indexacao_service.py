@@ -16,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ..erros import ErroDeUso
 from ..infraestrutura import db, rag
-from . import seguranca_ia
+from . import custo_service, seguranca_ia
 
 logger = logging.getLogger("indexacao")
 
@@ -97,6 +97,7 @@ def indexar_documento(documento_id: int) -> None:
                               [(documento_id, numero, texto) for numero, texto in paginas])
                 c.execute("""UPDATE documentos SET status = 'pronto', progresso = 100, erro = NULL, trechos = ?,
                                     alerta_instrucoes = ? WHERE id = ?""", (len(trechos), alerta, documento_id))
+                custo_service.invalidar_disciplina(c, disciplina_id)  # material mudou: respostas antigas saem
         logger.info("documento_indexado", extra={"documento_id": documento_id, "trechos": len(trechos),
                                                  "alerta_instrucoes": alerta})
     except ErroDeUso as erro:

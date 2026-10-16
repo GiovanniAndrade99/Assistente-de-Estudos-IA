@@ -25,5 +25,6 @@ def dados_publicos() -> dict:
             "mensagens_meses": config.RETENCAO_MENSAGENS_MESES,
             "chamados_meses": config.RETENCAO_CHAMADOS_MESES,
             "backup_dias": config.RETENCAO_BACKUP_DIAS,
+            "cache_respostas_dias": config.CACHE_RESPOSTAS_DIAS,
         },
     }

@@ -99,6 +99,21 @@ GEMINI_MODELOS_RESERVA = [
 ]
 TEMPO_LIMITE_SEGUNDOS = 60  # por tentativa
 
+# Custo da IA (aplicacao/custo_service.py). Limites curtos contra abuso, por pessoa:
+LIMITE_CHAT_5MIN = int(os.getenv("LIMITE_CHAT_5MIN", "20"))
+LIMITE_ESTUDO_5MIN = int(os.getenv("LIMITE_ESTUDO_5MIN", "15"))     # resumo, flashcards, simulado
+LIMITE_UPLOADS_5MIN = int(os.getenv("LIMITE_UPLOADS_5MIN", "10"))
+# Cota diária de pedidos que chamam o Gemini (24 h corridas); respostas do cache não contam.
+# 0 desliga a cota. Admin usa a cota de professor.
+COTA_IA_DIA_ALUNO = int(os.getenv("COTA_IA_DIA_ALUNO", "60"))
+COTA_IA_DIA_PROFESSOR = int(os.getenv("COTA_IA_DIA_PROFESSOR", "200"))
+# Respostas do chat e resumos repetidos voltam do cache (sem chamar o Gemini) por N dias.
+CACHE_RESPOSTAS_DIAS = int(os.getenv("CACHE_RESPOSTAS_DIAS", "7"))
+# Tokens por dia (entrada + saída, de todo o sistema): ALERTA avisa no log e na tela de
+# métricas; TETO pausa a IA até o dia seguinte (UTC). 0 desliga.
+ALERTA_TOKENS_DIA = int(os.getenv("ALERTA_TOKENS_DIA", "0"))
+TETO_TOKENS_DIA = int(os.getenv("TETO_TOKENS_DIA", "0"))
+
 # Onde ficam banco, PDFs e índice. Configurável para rodar uma cópia isolada (testes, avaliação).
 PASTA_DADOS = Path(os.getenv("PASTA_DADOS", str(RAIZ / "data")))
 PASTA_UPLOADS = PASTA_DADOS / "uploads"

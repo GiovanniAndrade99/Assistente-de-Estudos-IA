@@ -210,6 +210,16 @@ CREATE TABLE IF NOT EXISTS tokens_conta (
     usado_em    TEXT,
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Cache de respostas da IA por disciplina (aplicacao/custo_service.py). Sem coluna de
+-- usuário e sem a pergunta: a chave é um hash. Vale CACHE_RESPOSTAS_DIAS e é apagado
+-- quando um PDF da disciplina entra ou sai.
+CREATE TABLE IF NOT EXISTS cache_respostas (
+    chave          TEXT PRIMARY KEY,
+    disciplina_id  INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    dados_json     TEXT NOT NULL,
+    criado_em      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as
@@ -236,6 +246,8 @@ MIGRACOES = [
     ("documentos", "alerta_instrucoes", "INTEGER NOT NULL DEFAULT 0"),
     # Sobe a cada reenvio do mesmo arquivo: a indexação antiga sabe que ficou obsoleta
     ("documentos", "versao", "INTEGER NOT NULL DEFAULT 1"),
+    # Sobe quando um PDF da disciplina entra ou sai: invalida o cache de respostas
+    ("disciplinas", "versao_indice", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 

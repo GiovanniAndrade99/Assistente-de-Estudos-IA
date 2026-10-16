@@ -68,6 +68,8 @@ async function preencher() {
     linhaRetencao("Mensagens do chat da turma", meses(r.mensagens_meses)),
     linhaRetencao("Chamados de suporte já respondidos", meses(r.chamados_meses)),
     linhaRetencao("Cópias de segurança (backups)", `${r.backup_dias} dias`),
+    linhaRetencao("Respostas da IA guardadas para perguntas repetidas (sem identificar quem perguntou)",
+      `${r.cache_respostas_dias} dias, ou até o material da disciplina mudar`),
   );
 }
 

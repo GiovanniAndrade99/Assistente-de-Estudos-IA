@@ -13,7 +13,7 @@ const PERGUNTAS_FREQUENTES = [
   ["Meu PDF foi enviado, mas o assistente não usa o conteúdo.",
     "Depois do envio, o PDF é processado em segundo plano: acompanhe a barra na lista de materiais. PDFs escaneados passam por leitura de texto (OCR), que é mais lenta e pode errar em imagens ruins. Se aparecer erro, abra um chamado na categoria \"Problema técnico\"."],
   ["Apareceu um erro de limite ou de modelo sobrecarregado.",
-    "O nível gratuito da API do Gemini limita as requisições por minuto. O sistema já tenta de novo e troca para modelos reserva; se o erro continuar, espere um minuto e tente outra vez."],
+    "Cada pessoa tem um limite de pedidos à IA em 24 horas (perguntas repetidas na mesma disciplina não contam, porque a resposta já guardada é reaproveitada). Além disso, a API do Gemini limita as requisições por minuto: o sistema já tenta de novo e troca para modelos reserva; se o erro continuar, espere um minuto e tente outra vez."],
   ["Como gero resumos, flashcards e simulados?",
     "Resumo e flashcards ficam nos botões de cada PDF, em \"Materiais\" (tela do Assistente IA). Simulados têm uma tela própria no menu: escolha o material e a quantidade de questões."],
   ["Como entrego uma atividade?",

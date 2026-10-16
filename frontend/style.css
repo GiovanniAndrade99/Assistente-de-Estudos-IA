@@ -1286,6 +1286,7 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
   background: var(--surface); border: 1px solid var(--border); }
 .bloco-metrica strong { font: 600 1.5rem var(--font-display); font-variant-numeric: tabular-nums; }
 .bloco-metrica span { font-size: .82rem; color: var(--ink-3); }
+.resumo-metricas .bloco-largo { grid-column: 1 / -1; margin: 0; }
 #tabela-metricas td.numero { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Documentos em processamento (indexação em segundo plano) */

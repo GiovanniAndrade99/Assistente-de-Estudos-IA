@@ -17,10 +17,10 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 from google.genai import types
 
-from .. import prompts
+from .. import config, prompts
 from ..erros import ErroDeUso
 from ..infraestrutura import db, metricas, rag
-from . import limite_service
+from . import custo_service, limite_service
 
 # Limite de caracteres enviados ao modelo (~50 mil tokens), para não estourar a
 # cota por minuto do nível gratuito em apostilas muito grandes.
@@ -81,20 +81,29 @@ def _aviso(cortado: bool) -> str | None:
 
 
 def _limitar_estudo(usuario_id: int) -> None:
-    limite_service.limitar(f"usuario:{usuario_id}", "estudo", limite=15, janela_minutos=5)
+    limite_service.limitar(f"usuario:{usuario_id}", "estudo", config.LIMITE_ESTUDO_5MIN, janela_minutos=5)
 
 
 def resumir(disciplina_id: int, arquivo: str, usuario_id: int) -> dict:
+    """O resumo de um PDF é igual para todos: fica no cache até o PDF mudar."""
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
-    resposta, modelo = _gerar(prompts.prompt_de_estudo(prompts.PROMPT_RESUMO, documento), temperatura=0.3)
     metricas.registrar("resumo")
-    return {"arquivo": arquivo, "resumo": resposta.text, "aviso": _aviso(cortado), "modelo": modelo}
+    chave = custo_service.chave_resumo(disciplina_id, arquivo)
+    guardado = custo_service.ler(chave)
+    if guardado:
+        return {**guardado, "cache": True}
+    custo_service.antes_de_chamar_ia(usuario_id)
+    resposta, modelo = _gerar(prompts.prompt_de_estudo(prompts.PROMPT_RESUMO, documento), temperatura=0.3)
+    resultado = {"arquivo": arquivo, "resumo": resposta.text, "aviso": _aviso(cortado), "modelo": modelo}
+    custo_service.guardar(chave, disciplina_id, resultado)
+    return resultado
 
 
 def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 10) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
+    custo_service.antes_de_chamar_ia(usuario_id)
     prompt = prompts.prompt_de_estudo(prompts.PROMPT_FLASHCARDS, documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Flashcard])
     cartoes = [c.model_dump() for c in resposta.parsed]
@@ -105,6 +114,7 @@ def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantida
 def gerar_simulado(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 5) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
+    custo_service.antes_de_chamar_ia(usuario_id)
     prompt = prompts.prompt_de_estudo(prompts.PROMPT_SIMULADO, documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Questao])
     # Descarta questões malformadas (o modelo às vezes erra o número de alternativas)

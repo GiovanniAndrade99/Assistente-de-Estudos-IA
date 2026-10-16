@@ -36,9 +36,19 @@ async function carregarMetricas() {
     ["Simulados corrigidos", t.simulado_corrigido], ["Chamadas à IA", t.chamadas_ia],
     ["Tokens (entrada + saída)", (t.tokens_entrada || 0) + (t.tokens_saida || 0)],
   ];
+  const ia = dados.ia_hoje;
+  blocos.push(["Respostas do cache (sem custo)", t.respostas_do_cache], ["Tokens hoje", ia.tokens]);
+  const limiteHoje = ia.teto || ia.alerta;
+  const passouAlerta = ia.alerta && ia.tokens >= ia.alerta;
   $("resumo-metricas").innerHTML = blocos
     .map(([rotulo, valor]) => `<div class="bloco-metrica"><strong>${numero(valor)}</strong><span>${rotulo}</span></div>`)
-    .join("");
+    .join("") + `
+    <p class="dica bloco-largo">
+      ${passouAlerta ? `<span class="etiqueta laranja">Alerta: hoje já passou de ${numero(ia.alerta)} tokens</span> ` : ""}
+      ${limiteHoje ? `Tokens hoje: ${numero(ia.tokens)} de ${numero(limiteHoje)} (${ia.teto ? "teto" : "alerta"}). ` : ""}
+      Cota por pessoa em 24 h: ${ia.cota_aluno ? numero(ia.cota_aluno) : "sem limite"} pedidos (aluno),
+      ${ia.cota_professor ? numero(ia.cota_professor) : "sem limite"} (professor). Ajuste no .env.
+    </p>`;
 
   const tabela = $("tabela-metricas");
   if (!dados.por_dia.length) {

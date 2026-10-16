@@ -66,9 +66,14 @@ def registrar_uso(resposta) -> None:
     uso = getattr(resposta, "usage_metadata", None)
     metricas.registrar("chamadas_ia")
     if uso:
-        metricas.registrar("tokens_entrada", getattr(uso, "prompt_token_count", 0) or 0)
+        antes = metricas.tokens_hoje() if config.ALERTA_TOKENS_DIA > 0 else 0
+        entrada = getattr(uso, "prompt_token_count", 0) or 0
         saida = (getattr(uso, "candidates_token_count", 0) or 0) + (getattr(uso, "thoughts_token_count", 0) or 0)
+        metricas.registrar("tokens_entrada", entrada)
         metricas.registrar("tokens_saida", saida)
+        if antes < config.ALERTA_TOKENS_DIA <= antes + entrada + saida:  # avisa uma vez, ao cruzar
+            logger.warning("alerta_tokens_dia", extra={"tokens_hoje": antes + entrada + saida,
+                                                       "alerta": config.ALERTA_TOKENS_DIA})
 
 
 def _sem_ferramentas(configuracao: types.GenerateContentConfig | None):

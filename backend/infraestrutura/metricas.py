@@ -30,6 +30,15 @@ def registrar(evento: str, quantidade: int = 1) -> None:
         logger.exception("metrica_falhou", extra={"evento": evento})
 
 
+def tokens_hoje() -> int:
+    """Tokens do Gemini (entrada + saída) gastos hoje (UTC) por todo o sistema."""
+    linha = db.consultar_um(
+        """SELECT COALESCE(SUM(total), 0) AS n FROM metricas_diarias
+           WHERE dia = date('now') AND evento IN ('tokens_entrada', 'tokens_saida')"""
+    )
+    return linha["n"]
+
+
 def resumo(dias: int) -> dict:
     linhas = db.consultar(
         """SELECT dia, evento, total FROM metricas_diarias
