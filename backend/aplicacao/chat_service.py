@@ -33,10 +33,11 @@ def _com_documento_id(disciplina_id: int, fontes: list[dict]) -> list[dict]:
     return [{**f, "documento_id": ids.get(f["arquivo"])} for f in fontes]
 
 
-def _guardar(usuario_id: int, disciplina_id: int, pergunta: str, resposta: str) -> None:
+def _guardar(usuario_id: int, disciplina_id: int, pergunta: str, resposta: str, fontes: list[dict]) -> None:
+    arquivos = list(dict.fromkeys(f["arquivo"] for f in fontes))  # sem repetir, na ordem de relevância
     db.executar(  # histórico usado no painel do professor
-        "INSERT INTO perguntas (usuario_id, disciplina_id, pergunta, resposta) VALUES (?, ?, ?, ?)",
-        (usuario_id, disciplina_id, pergunta, resposta),
+        "INSERT INTO perguntas (usuario_id, disciplina_id, pergunta, resposta, fontes_arquivos) VALUES (?, ?, ?, ?, ?)",
+        (usuario_id, disciplina_id, pergunta, resposta, json.dumps(arquivos, ensure_ascii=False)),
     )
     registrar_pergunta(usuario_id)
 
@@ -53,7 +54,7 @@ def chat(disciplina_id: int, pergunta: str, usuario_id: int) -> dict:
         if resultado["fontes"]:
             custo_service.guardar(chave, disciplina_id, resultado)
     resultado["fontes"] = _com_documento_id(disciplina_id, resultado["fontes"])
-    _guardar(usuario_id, disciplina_id, pergunta, resultado["resposta"])
+    _guardar(usuario_id, disciplina_id, pergunta, resultado["resposta"], resultado["fontes"])
     return resultado
 
 
@@ -95,7 +96,7 @@ def chat_stream(disciplina_id: int, pergunta: str, usuario_id: int):
             return
         resposta = "".join(partes)
         custo_service.guardar(chave, disciplina_id, {"resposta": resposta, "fontes": trechos, "modelo": modelo})
-        _guardar(usuario_id, disciplina_id, pergunta, resposta)
+        _guardar(usuario_id, disciplina_id, pergunta, resposta, trechos)
         yield _evento("fim", {"resposta": resposta, "modelo": modelo})
 
     return eventos()
@@ -104,7 +105,7 @@ def chat_stream(disciplina_id: int, pergunta: str, usuario_id: int):
 def _eventos_do_cache(disciplina_id: int, pergunta: str, usuario_id: int, guardada: dict):
     yield _evento("fontes", _com_documento_id(disciplina_id, guardada["fontes"]))
     yield _evento("texto", guardada["resposta"])
-    _guardar(usuario_id, disciplina_id, pergunta, guardada["resposta"])
+    _guardar(usuario_id, disciplina_id, pergunta, guardada["resposta"], guardada["fontes"])
     yield _evento("fim", {"resposta": guardada["resposta"], "modelo": guardada.get("modelo"), "cache": True})
 
 

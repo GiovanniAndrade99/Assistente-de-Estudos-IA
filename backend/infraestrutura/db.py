@@ -278,6 +278,8 @@ MIGRACOES = [
     ("documentos", "versao", "INTEGER NOT NULL DEFAULT 1"),
     # Sobe quando um PDF da disciplina entra ou sai: invalida o cache de respostas
     ("disciplinas", "versao_indice", "INTEGER NOT NULL DEFAULT 1"),
+    # PDFs que embasaram a resposta (lista JSON): painel "o que reforçar" conta dúvidas por aula
+    ("perguntas", "fontes_arquivos", "TEXT NOT NULL DEFAULT '[]'"),
 ]
 
 

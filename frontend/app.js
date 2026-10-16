@@ -900,8 +900,9 @@ async function carregarPainel() {
   conteudo.innerHTML = "<p class='dica'>Carregando...</p>";
   try {
     const url = `/api/professor/${abaPainel}?disciplina_id=${disciplinaAtual.id}`;
-    const linhas = await chamarApi(url);
-    conteudo.innerHTML = abaPainel === "notas" ? htmlNotas(linhas) : htmlPerguntas(linhas);
+    const dados = await chamarApi(url);
+    const desenhar = { notas: htmlNotas, perguntas: htmlPerguntas, temas: htmlTemas, reforcar: htmlReforcar };
+    conteudo.innerHTML = desenhar[abaPainel](dados);
   } catch (erro) {
     conteudo.innerHTML = `<p class="erro">${escaparHtml(erro.message)}</p>`;
   }
@@ -930,8 +931,10 @@ function htmlNotas(linhas) {
     <tr><td>${escaparHtml(l.aluno)}</td><td>${escaparHtml(l.arquivo)}</td>
     <td>${l.acertos}/${l.total}</td><td>${formatarData(l.criado_em)}</td></tr>`).join("");
 
+  const csv = `/api/professor/notas.csv?disciplina_id=${disciplinaAtual.id}`;
   return `
-    <h3>Desempenho por aluno</h3>
+    <div class="item-topo"><h3>Desempenho por aluno</h3>
+      <a class="botao-secundario" href="${csv}" download>Exportar CSV</a></div>
     <table><thead><tr><th>Aluno</th><th>Simulados</th><th>Acerto médio</th></tr></thead><tbody>${resumo}</tbody></table>
     <h3>Histórico</h3>
     <table><thead><tr><th>Aluno</th><th>Material</th><th>Nota</th><th>Data</th></tr></thead><tbody>${historico}</tbody></table>`;
@@ -947,6 +950,31 @@ function htmlPerguntas(linhas) {
     </div>`).join("");
 }
 
+// Temas: agrupados no servidor, sem IA; exemplos só de temas com 2 ou mais alunos e sem nomes
+function htmlTemas({ temas, total_perguntas: total }) {
+  if (!temas.length) return "<p class='dica'>Nenhum aluno fez perguntas nesta disciplina ainda.</p>";
+  return `<p class="dica">${total} pergunta(s) agrupadas por assunto. Exemplos aparecem só em temas com perguntas
+      de pelo menos dois alunos, sem identificar quem perguntou.</p>` + temas.map((t) => `
+    <div class="pergunta-aluno">
+      <div class="meta"><strong>${escaparHtml(t.tema || "outros")}</strong> · ${t.perguntas} pergunta(s) de
+        ${t.alunos} aluno(s)</div>
+      ${t.exemplos.length ? `<ul>${t.exemplos.map((e) => `<li>${escaparHtml(e)}</li>`).join("")}</ul>` : ""}
+    </div>`).join("");
+}
+
+function htmlReforcar(aulas) {
+  if (!aulas.length) return "<p class='dica'>Envie materiais para ver quais aulas precisam de reforço.</p>";
+  return `<p class="dica">Ordem de prioridade: erro nos simulados (peso 60%) e dúvidas no assistente que usaram a aula
+      como fonte (peso 40%).</p>
+    <table><thead><tr><th>Aula</th><th>Prioridade</th><th>Acerto</th><th>Dúvidas</th><th>Estudaram</th></tr></thead><tbody>
+    ${aulas.map((a) => {
+      const pct = Math.round(100 * a.prioridade);
+      return `<tr><td title="${escaparHtml(a.motivo)}">${escaparHtml(a.arquivo)}</td>
+        <td><div class="barra"><div data-largura="${pct}"></div></div> ${pct}</td>
+        <td>${a.acerto === null ? "—" : `${a.acerto}% (${a.simulados})`}</td>
+        <td>${a.duvidas}</td><td>${a.estudaram}</td></tr>`;
+    }).join("")}</tbody></table>`;
+}
 
 // Espera os outros arquivos (simulados.js, calendario.js...) registrarem suas telas
 document.addEventListener("DOMContentLoaded", iniciar);
