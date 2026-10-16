@@ -1,0 +1,48 @@
+name: Avaliação da IA
+
+# Manual: chama o Gemini de verdade (gasta cota). Usa só o curso demo, sem dado pessoal.
+# Precisa do segredo GEMINI_API_KEY no repositório (Settings > Secrets and variables > Actions).
+on:
+  workflow_dispatch:
+    inputs:
+      meta:
+        description: "Taxa mínima de acerto (0 a 1)"
+        default: "0.9"
+      intervalo:
+        description: "Segundos entre perguntas (cota por minuto)"
+        default: "6"
+
+permissions:
+  contents: read
+
+jobs:
+  avaliar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Avaliar
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CARREGAR_DOTENV: "0"
+          META: ${{ inputs.meta }}
+          INTERVALO: ${{ inputs.intervalo }}
+        run: python -m scripts.avaliar_ia --meta "$META" --intervalo "$INTERVALO" --saida relatorio-avaliacao.json
+
+      - name: Guardar relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-avaliacao
+          path: relatorio-avaliacao.json
+          if-no-files-found: ignore

@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from ..erros import ErroDeUso
 from ..infraestrutura import db, rag
+from . import seguranca_ia
 
 logger = logging.getLogger("indexacao")
 
@@ -84,6 +85,7 @@ def indexar_documento(documento_id: int) -> None:
         paginas = rag.extrair_paginas(rag.caminho_do_pdf(disciplina_id, arquivo),
                                       _progresso(documento_id, 0, 40))
         trechos = rag.montar_trechos(disciplina_id, arquivo, paginas)
+        alerta = int(seguranca_ia.contem_instrucoes(texto for _, texto in paginas))
         vetores = rag.gerar_embeddings_com_progresso(trechos, _progresso(documento_id, 40, 99))
         with TRAVA_DOCUMENTOS:
             if not _ainda_e_o_mesmo(documento):
@@ -93,9 +95,10 @@ def indexar_documento(documento_id: int) -> None:
                 c.execute("DELETE FROM paginas_documento WHERE documento_id = ?", (documento_id,))
                 c.executemany("INSERT INTO paginas_documento (documento_id, pagina, texto) VALUES (?, ?, ?)",
                               [(documento_id, numero, texto) for numero, texto in paginas])
-                c.execute("""UPDATE documentos SET status = 'pronto', progresso = 100, erro = NULL, trechos = ?
-                             WHERE id = ?""", (len(trechos), documento_id))
-        logger.info("documento_indexado", extra={"documento_id": documento_id, "trechos": len(trechos)})
+                c.execute("""UPDATE documentos SET status = 'pronto', progresso = 100, erro = NULL, trechos = ?,
+                                    alerta_instrucoes = ? WHERE id = ?""", (len(trechos), alerta, documento_id))
+        logger.info("documento_indexado", extra={"documento_id": documento_id, "trechos": len(trechos),
+                                                 "alerta_instrucoes": alerta})
     except ErroDeUso as erro:
         _marcar_erro(documento, erro.mensagem)
     except Exception:

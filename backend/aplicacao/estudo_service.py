@@ -87,7 +87,7 @@ def _limitar_estudo(usuario_id: int) -> None:
 def resumir(disciplina_id: int, arquivo: str, usuario_id: int) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
-    resposta, modelo = _gerar(prompts.PROMPT_RESUMO.format(documento=documento), temperatura=0.3)
+    resposta, modelo = _gerar(prompts.prompt_de_estudo(prompts.PROMPT_RESUMO, documento), temperatura=0.3)
     metricas.registrar("resumo")
     return {"arquivo": arquivo, "resumo": resposta.text, "aviso": _aviso(cortado), "modelo": modelo}
 
@@ -95,7 +95,7 @@ def resumir(disciplina_id: int, arquivo: str, usuario_id: int) -> dict:
 def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 10) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
-    prompt = prompts.PROMPT_FLASHCARDS.format(documento=documento, quantidade=quantidade)
+    prompt = prompts.prompt_de_estudo(prompts.PROMPT_FLASHCARDS, documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Flashcard])
     cartoes = [c.model_dump() for c in resposta.parsed]
     metricas.registrar("flashcards")
@@ -105,7 +105,7 @@ def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantida
 def gerar_simulado(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 5) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
-    prompt = prompts.PROMPT_SIMULADO.format(documento=documento, quantidade=quantidade)
+    prompt = prompts.prompt_de_estudo(prompts.PROMPT_SIMULADO, documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Questao])
     # Descarta questões malformadas (o modelo às vezes erra o número de alternativas)
     questoes = [
