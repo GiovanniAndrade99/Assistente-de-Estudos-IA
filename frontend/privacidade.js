@@ -65,6 +65,8 @@ async function preencher() {
     linhaRetencao("Pseudônimos de e-mail das tentativas de login", `${r.tentativas_login_minutos} minutos`),
     linhaRetencao("Pseudônimos de IP e contadores de uso", "1 dia"),
     linhaRetencao("Perguntas ao assistente, notas de simulado e eventos", meses(r.historico_meses)),
+    linhaRetencao("Trilha até a prova", `${meses(r.historico_meses)} depois da data-alvo, ou até você apagar`),
+    linhaRetencao("Seu baralho de flashcards", "Até você apagar os cartões ou excluir a conta"),
     linhaRetencao("Mensagens do chat da turma", meses(r.mensagens_meses)),
     linhaRetencao("Chamados de suporte já respondidos", meses(r.chamados_meses)),
     linhaRetencao("Cópias de segurança (backups)", `${r.backup_dias} dias`),

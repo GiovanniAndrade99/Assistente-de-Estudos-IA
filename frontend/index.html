@@ -36,6 +36,7 @@
       <symbol id="i-seta-dir" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
       <symbol id="i-ajuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></symbol>
       <symbol id="i-brilho" viewBox="0 0 24 24"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.96L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .96 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .96L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.96 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/></symbol>
+      <symbol id="i-trilha" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
       <symbol id="i-formatura" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
     </defs>
   </svg>
@@ -73,6 +74,7 @@
           <button type="button" data-tela="disciplinas"><svg><use href="#i-grade"/></svg><span>Minhas disciplinas</span></button>
           <button type="button" data-tela="assistente"><svg><use href="#i-robo"/></svg><span>Assistente IA</span></button>
           <button type="button" data-tela="simulados"><svg><use href="#i-simulado"/></svg><span>Simulados</span></button>
+          <button type="button" data-tela="trilha"><svg><use href="#i-trilha"/></svg><span>Trilha até a prova</span></button>
           <button type="button" data-tela="atividades"><svg><use href="#i-atividade"/></svg><span>Atividades</span></button>
           <button type="button" data-tela="videos"><svg><use href="#i-video"/></svg><span>Videoaulas</span></button>
           <h2>Organizar</h2>
@@ -205,6 +207,36 @@
         <div id="simulado-area"></div>
         <h3 class="titulo-secao">Meus resultados</h3>
         <div id="simulado-historico"></div>
+      </div>
+    </main>
+
+    <main class="tela pagina" id="tela-trilha" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-trilha"/></svg></span>
+        <div>
+          <h2>Trilha até a prova</h2>
+          <p>Plano semanal até a sua data-alvo (prova, ENADE, transferência ou segunda graduação) e revisão dos seus
+            flashcards no dia certo.</p>
+        </div>
+      </header>
+      <div class="precisa-disciplina">
+        <div id="trilha-resumo"></div>
+        <form id="form-trilha" class="cartao-form" hidden>
+          <h3 id="titulo-form-trilha">Montar minha trilha</h3>
+          <div class="linha-campos">
+            <label>Objetivo <select name="objetivo" id="trilha-objetivo" required></select></label>
+            <label>Data-alvo <input type="date" name="data_alvo" id="trilha-data" required></label>
+            <label>Horas por semana <input type="number" name="horas_semana" id="trilha-horas" min="1" max="60" value="6" required></label>
+          </div>
+          <div id="trilha-sugestoes" class="linha-botoes"></div>
+          <div class="linha-botoes">
+            <button type="submit" class="botao-primario">Salvar trilha</button>
+            <button type="button" class="botao-secundario" id="cancelar-trilha" hidden>Cancelar</button>
+          </div>
+          <p class="status" role="status"></p>
+        </form>
+        <section id="trilha-revisao" class="bloco" hidden></section>
+        <div id="trilha-plano"></div>
       </div>
     </main>
 
@@ -379,6 +411,7 @@
       <p class="aviso-fontes glare">ℹ️ O <strong>CPC</strong> (Conceito Preliminar de Curso, de 1 a 5) vem do ranking
         do MEC compilado por portais de vestibular e pode estar desatualizado; as datas vêm dos sites oficiais.
         Confira sempre o <strong>edital oficial</strong> antes de se inscrever.</p>
+      <p class="dica" id="fontes-universidades"></p>
     </main>
 
     <main class="tela pagina" id="tela-metricas" hidden>
@@ -654,6 +687,7 @@
   <script src="disciplinas.js"></script>
   <script src="cursor-alvo.js"></script>
   <script src="simulados.js"></script>
+  <script src="trilha.js"></script>
   <script src="atividades.js"></script>
   <script src="calendario.js"></script>
   <script src="videos.js"></script>

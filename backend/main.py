@@ -24,7 +24,7 @@ from . import config
 from .api import (
     admin_router, auth_router, chat_router, conta_router, disciplinas_router, documentos_router, estudo_router,
     ia_router, privacidade_router, professor_router, progresso_router, saude_router, suporte_router,
-    turma_router,
+    trilha_router, turma_router,
 )
 from .aplicacao import demo_service, indexacao_service, retencao_service
 from .excecoes import registrar_handlers
@@ -47,6 +47,7 @@ ROUTERS = (
     privacidade_router.router,
     conta_router.router,
     admin_router.router,
+    trilha_router.router,
 )
 
 

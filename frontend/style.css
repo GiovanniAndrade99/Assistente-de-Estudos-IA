@@ -1287,6 +1287,27 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 .bloco-metrica strong { font: 600 1.5rem var(--font-display); font-variant-numeric: tabular-nums; }
 .bloco-metrica span { font-size: .82rem; color: var(--ink-3); }
 .resumo-metricas .bloco-largo { grid-column: 1 / -1; margin: 0; }
+
+/* Trilha até a prova */
+.resumo-trilha { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 28px; }
+.resumo-trilha .contagem { display: flex; flex-direction: column; }
+.resumo-trilha .contagem strong { font: 600 1.6rem var(--font-display); font-variant-numeric: tabular-nums; }
+.resumo-trilha .contagem span { font-size: .82rem; color: var(--ink-3); }
+.resumo-trilha .linha-botoes { margin-left: auto; }
+#trilha-plano { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
+.semana-trilha { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+.semana-trilha.atual { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.semana-trilha.final { background: var(--paper-2); }
+.semana-trilha header { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.semana-trilha h3 { margin: 0; font-size: 1rem; }
+.semana-trilha ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: .9rem; }
+.semana-trilha .tarefa-aula { font-weight: 600; }
+#trilha-sugestoes { margin-top: 8px; flex-wrap: wrap; }
+#trilha-revisao { margin-top: 16px; }
+.cartao-revisao { padding: 18px; margin: 8px 0 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--paper-2); }
+.cartao-revisao .frente { font-weight: 600; margin: 0; }
+.cartao-revisao .verso { margin: 12px 0 0; padding-top: 12px; border-top: 1px dashed var(--border); }
+.botoes-nota { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 #tabela-metricas td.numero { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Documentos em processamento (indexação em segundo plano) */

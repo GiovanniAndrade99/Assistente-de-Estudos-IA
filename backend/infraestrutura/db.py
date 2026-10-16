@@ -211,6 +211,36 @@ CREATE TABLE IF NOT EXISTS tokens_conta (
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Trilha até a prova: meta de estudo de uma pessoa numa disciplina (aplicacao/trilha_service.py)
+CREATE TABLE IF NOT EXISTS trilhas (
+    usuario_id     INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    disciplina_id  INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    objetivo       TEXT NOT NULL CHECK (objetivo IN ('prova', 'enade', 'transferencia', 'segunda_graduacao')),
+    data_alvo      TEXT NOT NULL,  -- AAAA-MM-DD
+    horas_semana   INTEGER NOT NULL,
+    criado_em      TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em  TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (usuario_id, disciplina_id)
+);
+
+-- Baralho pessoal de flashcards com revisão espaçada (SM-2)
+CREATE TABLE IF NOT EXISTS flashcards (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id       INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    disciplina_id    INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    arquivo          TEXT NOT NULL DEFAULT '',
+    frente           TEXT NOT NULL,
+    verso            TEXT NOT NULL,
+    pagina           INTEGER,
+    facilidade       REAL NOT NULL DEFAULT 2.5,
+    intervalo_dias   INTEGER NOT NULL DEFAULT 0,
+    repeticoes       INTEGER NOT NULL DEFAULT 0,
+    proxima_revisao  TEXT NOT NULL DEFAULT (date('now')),
+    revisado_em      TEXT,
+    criado_em        TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (usuario_id, disciplina_id, frente)
+);
+
 -- Cache de respostas da IA por disciplina (aplicacao/custo_service.py). Sem coluna de
 -- usuário e sem a pergunta: a chave é um hash. Vale CACHE_RESPOSTAS_DIAS e é apagado
 -- quando um PDF da disciplina entra ou sai.

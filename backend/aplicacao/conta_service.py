@@ -83,6 +83,14 @@ def _consultas_de_exportacao(usuario_id: int) -> dict[str, tuple[str, tuple]]:
         "videos_adicionados": ("SELECT titulo, url, descricao, criado_em FROM videos WHERE adicionado_por = ?", u),
         "sessoes_ativas": ("""SELECT criado_em, expires_at FROM sessoes
                               WHERE usuario_id = ? AND expires_at > CURRENT_TIMESTAMP""", u),
+        "trilhas_de_estudo": ("""SELECT d.nome AS disciplina, t.objetivo, t.data_alvo, t.horas_semana, t.criado_em,
+                                        t.atualizado_em
+                                 FROM trilhas t JOIN disciplinas d ON d.id = t.disciplina_id
+                                 WHERE t.usuario_id = ?""", u),
+        "baralho_de_flashcards": ("""SELECT d.nome AS disciplina, f.arquivo, f.frente, f.verso, f.pagina,
+                                            f.proxima_revisao, f.revisado_em, f.criado_em
+                                     FROM flashcards f JOIN disciplinas d ON d.id = f.disciplina_id
+                                     WHERE f.usuario_id = ? ORDER BY f.criado_em""", u),
     }
 
 

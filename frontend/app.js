@@ -546,6 +546,13 @@ function renderFlashcards(caixa, r) {
     grade.appendChild(cartao);
   }
   caixa.appendChild(grade);
+  // Baralho pessoal com revisão espaçada (trilha.js)
+  const salvar = document.createElement("button");
+  salvar.type = "button";
+  salvar.className = "botao-secundario";
+  salvar.textContent = "Salvar no meu baralho";
+  salvar.onclick = () => salvarNoBaralho(r.arquivo, r.flashcards, salvar);
+  caixa.appendChild(salvar);
 }
 
 let contadorSimulados = 0;
@@ -939,6 +946,7 @@ function htmlPerguntas(linhas) {
       <details><summary>Ver resposta do assistente</summary><p>${escaparHtml(l.resposta)}</p></details>
     </div>`).join("");
 }
+
 
 // Espera os outros arquivos (simulados.js, calendario.js...) registrarem suas telas
 document.addEventListener("DOMContentLoaded", iniciar);

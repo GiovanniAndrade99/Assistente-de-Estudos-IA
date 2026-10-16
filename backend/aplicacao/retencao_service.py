@@ -41,6 +41,7 @@ def _regras() -> list[tuple[str, str, tuple]]:
             ("resultados_simulado", "DELETE FROM resultados_simulado WHERE criado_em <= datetime('now', ?)", prazo),
             ("simulados", "DELETE FROM simulados WHERE criado_em <= datetime('now', ?)", prazo),
             ("eventos", "DELETE FROM eventos WHERE data <= date('now', ?)", prazo),
+            ("trilhas_vencidas", "DELETE FROM trilhas WHERE data_alvo <= date('now', ?)", prazo),
         ]
     if config.RETENCAO_MENSAGENS_MESES > 0:
         regras.append(("mensagens_turma", "DELETE FROM mensagens_turma WHERE criado_em <= datetime('now', ?)",
