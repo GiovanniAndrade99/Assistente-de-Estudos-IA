@@ -33,6 +33,18 @@ def listar_documentos(disciplina_id: int, usuario_id: int) -> list[dict]:
     )
 
 
+def caminho_para_leitura(disciplina_id: int, documento_id: int) -> tuple:
+    """Arquivo do PDF de uma disciplina, para abrir na página citada."""
+    documento = db.consultar_um("SELECT arquivo FROM documentos WHERE id = ? AND disciplina_id = ?",
+                                (documento_id, disciplina_id))
+    if not documento:
+        raise HTTPException(404, "Documento não encontrado.")
+    caminho = rag.caminho_do_pdf(disciplina_id, documento["arquivo"])
+    if not caminho.exists():
+        raise HTTPException(404, "Documento não encontrado.")
+    return caminho, documento["arquivo"]
+
+
 def _ler_com_limite(arquivo: UploadFile, limite_mb: int) -> bytes:
     limite_bytes = limite_mb * 1024 * 1024
     partes, total = [], 0

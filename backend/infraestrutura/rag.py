@@ -71,11 +71,20 @@ def registrar_uso(resposta) -> None:
         metricas.registrar("tokens_saida", saida)
 
 
+def _sem_ferramentas(configuracao: types.GenerateContentConfig | None):
+    """O app não usa function calling; desligado, o SDK não registra avisos a cada chamada."""
+    desligado = types.AutomaticFunctionCallingConfig(disable=True)
+    if configuracao is None:
+        return types.GenerateContentConfig(automatic_function_calling=desligado)
+    return configuracao.model_copy(update={"automatic_function_calling": desligado})
+
+
 def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
     """Chama o Gemini tentando o modelo principal e, se falhar, os modelos reserva.
 
     Retorna (resposta, nome_do_modelo_usado).
     """
+    configuracao = _sem_ferramentas(configuracao)
     modelos = [config.GEMINI_MODEL] + config.GEMINI_MODELOS_RESERVA
     ultimo_erro = None
     for modelo in modelos:
@@ -99,6 +108,48 @@ def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
     if isinstance(ultimo_erro, APIError):
         raise ultimo_erro
     raise ErroDeUso("O Gemini demorou demais para responder. Tente novamente em instantes.", 504)
+
+
+def gerar_conteudo_stream(contents: str, configuracao: types.GenerateContentConfig):
+    """Como gerar_conteudo, mas devolve (pedaços_de_texto, modelo). Troca de modelo só
+    antes do primeiro pedaço: depois disso o texto já está chegando na tela."""
+    configuracao = _sem_ferramentas(configuracao)
+    modelos = [config.GEMINI_MODEL] + config.GEMINI_MODELOS_RESERVA
+    ultimo_erro = None
+    for modelo in modelos:
+        try:
+            fluxo = iter(_gemini().models.generate_content_stream(
+                model=modelo, contents=contents, config=configuracao,
+            ))
+            primeiro = next(fluxo, None)
+        except APIError as erro:
+            if erro.code not in (404, 429) and erro.code < 500:
+                raise
+            ultimo_erro = erro
+        except httpx.TimeoutException as erro:
+            ultimo_erro = erro
+        else:
+            return _pedacos(primeiro, fluxo), modelo
+        logger.warning("modelo_gemini_falhou", extra={"modelo": modelo, "erro": str(ultimo_erro)})
+    if isinstance(ultimo_erro, APIError):
+        raise ultimo_erro
+    raise ErroDeUso("O Gemini demorou demais para responder. Tente novamente em instantes.", 504)
+
+
+def _pedacos(primeiro, fluxo):
+    ultimo = None
+    for parte in _encadear(primeiro, fluxo):
+        ultimo = parte
+        if parte.text:
+            yield parte.text
+    if ultimo is not None:
+        registrar_uso(ultimo)  # o último pedaço traz o total de tokens
+
+
+def _encadear(primeiro, fluxo):
+    if primeiro is not None:
+        yield primeiro
+    yield from fluxo
 
 
 # ---------------------------------------------------------------- indexação
@@ -251,17 +302,25 @@ def buscar(pergunta: str, disciplina_id: int, k: int = config.TOP_K) -> list[dic
     return banco().buscar(vetor, k, disciplina_id)
 
 
+SEM_MATERIAL = "Esta disciplina ainda não tem materiais. Envie um PDF primeiro."
+
+
+def _configuracao_chat() -> types.GenerateContentConfig:
+    return types.GenerateContentConfig(
+        system_instruction=SISTEMA_CHAT,
+        temperature=0.2,  # baixa = respostas mais fiéis ao material
+    )
+
+
 def responder(pergunta: str, disciplina_id: int) -> dict:
     """Fluxo completo do RAG: busca os trechos e pede a resposta ao Gemini."""
     trechos = buscar(pergunta, disciplina_id)
     if not trechos:
-        return {"resposta": "Esta disciplina ainda não tem materiais. Envie um PDF primeiro.", "fontes": []}
-
-    resposta, modelo = gerar_conteudo(
-        montar_prompt_chat(pergunta, trechos),
-        types.GenerateContentConfig(
-            system_instruction=SISTEMA_CHAT,
-            temperature=0.2,  # baixa = respostas mais fiéis ao material
-        ),
-    )
+        return {"resposta": SEM_MATERIAL, "fontes": []}
+    resposta, modelo = gerar_conteudo(montar_prompt_chat(pergunta, trechos), _configuracao_chat())
     return {"resposta": resposta.text, "fontes": trechos, "modelo": modelo}
+
+
+def responder_stream(pergunta: str, trechos: list[dict]):
+    """Pedaços da resposta conforme o Gemini gera. Devolve (pedaços, modelo)."""
+    return gerar_conteudo_stream(montar_prompt_chat(pergunta, trechos), _configuracao_chat())

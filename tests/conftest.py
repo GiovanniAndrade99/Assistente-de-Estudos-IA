@@ -94,8 +94,14 @@ def gemini_falso(monkeypatch):
         falso.chamadas_geracao.append(contents)
         return falso.resposta(), "modelo-de-teste"
 
+    def gerar_conteudo_stream(contents, configuracao):
+        falso.chamadas_geracao.append(contents)
+        pedacos = [falso.texto[i:i + 10] for i in range(0, len(falso.texto), 10)]
+        return iter(pedacos), "modelo-de-teste"
+
     monkeypatch.setattr(rag, "gerar_embeddings", gerar_embeddings)
     monkeypatch.setattr(rag, "gerar_conteudo", gerar_conteudo)
+    monkeypatch.setattr(rag, "gerar_conteudo_stream", gerar_conteudo_stream)
     return falso
 
 

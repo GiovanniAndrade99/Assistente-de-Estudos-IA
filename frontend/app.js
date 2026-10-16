@@ -37,7 +37,10 @@ let telaAtual = "assistente";
 // ---------------------------------------------------------- utilidades
 
 async function chamarApi(url, opcoes = {}) {
-  const resposta = await fetch(url, opcoes);
+  return lerRespostaJson(await fetch(url, opcoes));
+}
+
+async function lerRespostaJson(resposta) {
   if (resposta.status === 401) {  // sessão expirou ou não fez login
     location.href = "/login.html";
     throw new Error("Faça login para continuar.");
@@ -599,26 +602,94 @@ function renderSimulado(caixa, r) {
 
 // ---------------------------------------------------------- chat
 
-function formatarResposta(texto, fontes) {
-  // Transforma [1], [2]... em etiquetas com o nome do arquivo/página ao passar o mouse
-  let html = escaparHtml(texto)
+// PDF da fonte aberto na página citada (leitor de PDF do navegador, em outra aba)
+function linkDaFonte(f) {
+  return f.documento_id ? rotaDisciplina(`/documentos/${f.documento_id}/arquivo#page=${Number(f.pagina) || 1}`) : "";
+}
+
+function formatarTexto(texto, fontes) {
+  // Transforma [1], [2]... em etiquetas com arquivo/página que abrem o PDF na página
+  return escaparHtml(texto)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\[(\d+)\]/g, (original, n) => {
       const f = fontes[n - 1];
       if (!f) return original;
-      return `<span class="citacao" title="${escaparHtml(f.arquivo)} — pág. ${f.pagina}">${n}</span>`;
+      const titulo = `${escaparHtml(f.arquivo)} — pág. ${f.pagina}`;
+      const link = linkDaFonte(f);
+      return link
+        ? `<a class="citacao" href="${escaparHtml(link)}" target="_blank" rel="noopener" title="Abrir ${titulo}">${n}</a>`
+        : `<span class="citacao" title="${titulo}">${n}</span>`;
     });
+}
 
+function formatarResposta(texto, fontes) {
+  let html = formatarTexto(texto, fontes);
   if (fontes.length) {
-    const itens = fontes.map((f, i) => `
+    const itens = fontes.map((f, i) => {
+      const link = linkDaFonte(f);
+      const origem = `${escaparHtml(f.arquivo)}, pág. ${f.pagina}`;
+      return `
       <div class="fonte">
-        <strong>[${i + 1}]</strong> ${escaparHtml(f.arquivo)}, pág. ${f.pagina}
+        <strong>[${i + 1}]</strong> ${link ? `<a href="${escaparHtml(link)}" target="_blank" rel="noopener">${origem}</a>` : origem}
         <small>(similaridade ${f.similaridade})</small><br>
         ${escaparHtml(f.texto.slice(0, 300))}${f.texto.length > 300 ? "..." : ""}
-      </div>`).join("");
+      </div>`;
+    }).join("");
     html += `<details class="fontes"><summary>Ver trechos usados (${fontes.length})</summary>${itens}</details>`;
   }
   return html;
+}
+
+// Pergunta com a resposta em streaming: o texto aparece enquanto o Gemini escreve.
+// Eventos do servidor (SSE): fontes, texto (pedaços), fim ou erro.
+class SemStream extends Error {}
+
+async function perguntarEmStream(pergunta, balao, signal) {
+  if (!window.ReadableStream || !window.TextDecoderStream) throw new SemStream();
+  let resposta;
+  try {
+    resposta = await fetch(rotaDisciplina("/chat/stream"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pergunta }),
+      signal,
+    });
+  } catch (erro) {
+    if (erro.name === "AbortError") throw erro;
+    throw new SemStream();  // falha de rede/proxy: tenta a rota normal
+  }
+  const tipo = resposta.headers.get("Content-Type") || "";
+  if (!resposta.ok || !tipo.startsWith("text/event-stream")) {
+    await lerRespostaJson(resposta);  // 400, 403, 429...: mostra a mensagem do servidor
+    throw new SemStream();
+  }
+
+  const leitor = resposta.body.pipeThrough(new TextDecoderStream()).getReader();
+  let pendente = "", texto = "", fontes = [], fim = null;
+  while (!fim) {
+    const { value, done } = await leitor.read();
+    if (done) break;
+    pendente += value;
+    let corte;
+    while ((corte = pendente.indexOf("\n\n")) >= 0) {
+      const bloco = pendente.slice(0, corte);
+      pendente = pendente.slice(corte + 2);
+      const evento = /^event: (.*)$/m.exec(bloco)?.[1];
+      const dados = JSON.parse(/^data: (.*)$/m.exec(bloco)?.[1] ?? "null");
+      if (evento === "fontes") fontes = dados;
+      else if (evento === "erro") throw new Error(dados);
+      else if (evento === "fim") fim = dados;
+      else if (evento === "texto") {
+        const noFim = mensagens.scrollHeight - mensagens.scrollTop - mensagens.clientHeight < 60;
+        texto += dados;
+        balao.className = "mensagem bot escrevendo";
+        balao.innerHTML = formatarTexto(texto, fontes);
+        if (noFim) mensagens.scrollTop = mensagens.scrollHeight;
+      }
+    }
+  }
+  if (!fim) throw new Error("A resposta foi interrompida. Tente de novo.");
+  return { resposta: fim.resposta, fontes, modelo: fim.modelo };
 }
 
 function redimensionarCompositor() {
@@ -764,12 +835,18 @@ formPergunta.addEventListener("submit", async (evento) => {
       carregarDocumentos();
     }
     estadoCompositor.textContent = "";
-    const r = await chamarApi(rotaDisciplina("/chat"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pergunta }),
-      signal: controle.signal,
-    });
+    let r;
+    try {
+      r = await perguntarEmStream(pergunta, carregando, controle.signal);
+    } catch (erro) {
+      if (!(erro instanceof SemStream)) throw erro;
+      r = await chamarApi(rotaDisciplina("/chat"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pergunta }),
+        signal: controle.signal,
+      });
+    }
     carregando.className = "mensagem bot";
     carregando.innerHTML = formatarResposta(r.resposta, r.fontes) + rodapeModelo(r.modelo);
   } catch (erro) {

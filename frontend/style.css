@@ -508,6 +508,11 @@ input[type=radio], input[type=checkbox] { accent-color: var(--primary); }
   border-radius: 6px; background: var(--primary-tint); color: var(--primary-dark);
   font-size: .72rem; font-weight: 700; vertical-align: 2px; cursor: help;
 }
+a.citacao { text-decoration: none; cursor: pointer; }
+a.citacao:hover, a.citacao:focus-visible { background: var(--primary); color: var(--surface); }
+.fonte a { color: var(--primary-dark); }
+/* Resposta chegando em streaming: cursor piscando no fim do texto */
+.mensagem.escrevendo::after { content: "▍"; margin-left: 2px; color: var(--primary); animation: pulsar 1s steps(2) infinite; }
 details.fontes { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: .85rem; white-space: normal; }
 details.fontes summary { color: var(--ink-3); font-weight: 500; cursor: pointer; }
 details.fontes summary:hover { color: var(--primary); }

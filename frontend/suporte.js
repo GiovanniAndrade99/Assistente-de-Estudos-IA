@@ -9,7 +9,7 @@ const PERGUNTAS_FREQUENTES = [
   ["Por que o assistente disse que não encontrou a informação?",
     "Ele só responde com base nos PDFs da disciplina selecionada. Confira se o material certo foi enviado e se a disciplina escolhida é a correta. Reformular a pergunta com os termos usados na aula também ajuda."],
   ["O assistente pode errar?",
-    "Sim. É um modelo de IA e pode interpretar mal um trecho. Clique em \"Ver trechos usados\" abaixo da resposta para ver o arquivo e a página usados e confira no material. Veja mais na aba \"Sobre o assistente IA\"."],
+    "Sim. É um modelo de IA e pode interpretar mal um trecho. Clique no número da citação ([1], [2]...) para abrir o PDF na página usada, ou em \"Ver trechos usados\" abaixo da resposta, e confira no material. Veja mais na aba \"Sobre o assistente IA\"."],
   ["Meu PDF foi enviado, mas o assistente não usa o conteúdo.",
     "Depois do envio, o PDF é processado em segundo plano: acompanhe a barra na lista de materiais. PDFs escaneados passam por leitura de texto (OCR), que é mais lenta e pode errar em imagens ruins. Se aparecer erro, abra um chamado na categoria \"Problema técnico\"."],
   ["Apareceu um erro de limite ou de modelo sobrecarregado.",
