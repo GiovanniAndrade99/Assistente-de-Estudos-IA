@@ -18,7 +18,7 @@ from fastapi import HTTPException
 
 from .. import config
 from ..core.seguranca import conferir_senha
-from ..infraestrutura import db
+from ..infraestrutura import db, metricas
 from . import pseudonimo
 
 logger = logging.getLogger("conta")
@@ -103,6 +103,7 @@ def exportar(usuario_id: int) -> dict:
     for nome, (sql, parametros) in _consultas_de_exportacao(usuario_id).items():
         dados[nome] = db.consultar(sql, parametros)
     logger.info("dados_exportados", extra={"usuario_id": usuario_id})
+    metricas.registrar("dados_exportados")
     return dados
 
 
@@ -158,6 +159,7 @@ def excluir_conta(usuario: dict, senha: str, confirmacao: str) -> None:
         _excluir_dados(c, usuario["id"], salvo["email"])
     _registrar_exclusao(usuario["id"])
     logger.info("conta_excluida", extra={"usuario_id": usuario["id"]})
+    metricas.registrar("conta_excluida")
 
 
 def reaplicar_exclusoes(caminho: Path) -> int:

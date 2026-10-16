@@ -24,7 +24,7 @@ from fastapi import HTTPException
 from .. import config
 from ..core import seguranca
 from ..core.seguranca import conferir_senha, gerar_hash_senha, gerar_token_sessao, hash_token
-from ..infraestrutura import db
+from ..infraestrutura import db, metricas
 from . import limite_service, pseudonimo
 from . import disciplinas_service
 
@@ -187,6 +187,7 @@ def cadastrar(
         disciplinas_service.matricular(usuario_id, disciplina_ids)
     token, duracao = _iniciar_sessao(usuario_id)
     logger.info("usuario_cadastrado", extra={"usuario_id": usuario_id, "tipo": tipo})
+    metricas.registrar(f"cadastro_{tipo}")
     usuario = db.consultar_um("SELECT * FROM usuarios WHERE id = ?", (usuario_id,))
     return perfil_publico(usuario), token, duracao
 
@@ -223,6 +224,7 @@ def entrar(email: str, senha: str, ip: str = "desconhecido") -> tuple[dict, str,
         )
     token, duracao = _iniciar_sessao(usuario["id"])
     logger.info("login_ok", extra={"usuario_id": usuario["id"]})
+    metricas.registrar("login")
     return perfil_publico(usuario), token, duracao
 
 

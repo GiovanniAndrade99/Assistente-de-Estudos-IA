@@ -181,6 +181,15 @@ CREATE TABLE IF NOT EXISTS simulados (
     finalizado_em  TEXT
 );
 
+-- Métricas de uso sem dado pessoal: só contagens por dia e por evento
+-- (infraestrutura/metricas.py). Não há coluna de usuário de propósito.
+CREATE TABLE IF NOT EXISTS metricas_diarias (
+    dia     TEXT NOT NULL,
+    evento  TEXT NOT NULL,
+    total   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (dia, evento)
+);
+
 -- Links enviados por e-mail (redefinir senha, confirmar e-mail, trocar e-mail). Guarda só
 -- o hash do token, que vale uma vez e expira. `dado` é o novo e-mail, na troca.
 CREATE TABLE IF NOT EXISTS tokens_conta (

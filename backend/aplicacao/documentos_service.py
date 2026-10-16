@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import HTTPException, UploadFile
 
 from .. import config
-from ..infraestrutura import db, rag
+from ..infraestrutura import db, metricas, rag
 from . import limite_service
 from .disciplinas_service import disciplina_ou_404
 
@@ -64,6 +64,7 @@ def enviar_documento(disciplina_id: int, arquivo: UploadFile, usuario_id: int) -
            SET trechos = excluded.trechos, enviado_por = excluded.enviado_por, criado_em = CURRENT_TIMESTAMP""",
         (disciplina_id, nome, trechos, usuario_id),
     )
+    metricas.registrar("upload_pdf")
     return {"arquivo": nome, "trechos": trechos}
 
 

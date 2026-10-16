@@ -1,10 +1,11 @@
 """Rotas só de administrador."""
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from ..aplicacao import disciplinas_service
+from ..infraestrutura import metricas
 from .dependencias import somente_admin
 
 router = APIRouter(prefix="/api/admin")
@@ -25,3 +26,8 @@ def transferir_disciplina(disciplina_id: int, dados: Transferencia, admin: dict 
     resultado = disciplinas_service.transferir(disciplina_id, dados.email_professor)
     logger.info("disciplina_transferida", extra={"usuario_id": admin["id"], "disciplina_id": disciplina_id})
     return resultado
+
+
+@router.get("/metricas")
+def metricas_de_uso(dias: int = Query(30, ge=1, le=365), admin: dict = Depends(somente_admin)):
+    return metricas.resumo(dias)

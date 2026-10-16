@@ -19,6 +19,7 @@ from google.genai.errors import APIError
 from .. import config
 from ..erros import ErroDeUso
 from ..prompts import SISTEMA_CHAT, montar_prompt_chat
+from . import metricas
 from .vetores import BancoVetorial
 
 logger = logging.getLogger("rag")
@@ -48,6 +49,16 @@ def _gemini() -> genai.Client:
     return _cliente_gemini
 
 
+def registrar_uso(resposta) -> None:
+    """Conta chamadas e tokens do Gemini nas métricas diárias (custo da API)."""
+    uso = getattr(resposta, "usage_metadata", None)
+    metricas.registrar("chamadas_ia")
+    if uso:
+        metricas.registrar("tokens_entrada", getattr(uso, "prompt_token_count", 0) or 0)
+        saida = (getattr(uso, "candidates_token_count", 0) or 0) + (getattr(uso, "thoughts_token_count", 0) or 0)
+        metricas.registrar("tokens_saida", saida)
+
+
 def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
     """Chama o Gemini tentando o modelo principal e, se falhar, os modelos reserva.
 
@@ -60,6 +71,7 @@ def gerar_conteudo(contents: str, configuracao: types.GenerateContentConfig):
             resposta = _gemini().models.generate_content(
                 model=modelo, contents=contents, config=configuracao,
             )
+            registrar_uso(resposta)
             return resposta, modelo
         except APIError as erro:
             # 404 = modelo descontinuado; 429 = sem cota; 5xx = sobrecarga

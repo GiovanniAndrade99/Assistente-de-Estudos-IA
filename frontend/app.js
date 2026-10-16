@@ -171,7 +171,8 @@ const dadosDoForm = (form) => Object.fromEntries(new FormData(form));
 // ---------------------------------------------------------- navegação
 
 function mostrarTela(nome) {
-  if (!TELAS[nome] || (nome === "painel" && usuario.tipo !== "professor")) nome = "assistente";
+  if (!TELAS[nome] || (nome === "painel" && usuario.tipo !== "professor")
+      || (nome === "metricas" && !usuario.administrador)) nome = "assistente";
   if (nome !== telaAtual) TELAS[telaAtual]?.sair?.();
   telaAtual = nome;
   try { localStorage.setItem("tela", nome); } catch {}

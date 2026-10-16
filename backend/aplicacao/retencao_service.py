@@ -22,6 +22,8 @@ def _regras() -> list[tuple[str, str, tuple]]:
         ("tentativas_login", "DELETE FROM tentativas_login WHERE criado_em <= datetime('now', ?)",
          (f"-{config.JANELA_TENTATIVAS_LOGIN_MINUTOS} minutes",)),
         ("limites_de_uso", "DELETE FROM limite_uso WHERE criado_em <= datetime('now', '-1 day')", ()),
+        # Contagens anônimas: não são dados pessoais, mas não precisam crescer para sempre
+        ("metricas_antigas", "DELETE FROM metricas_diarias WHERE dia <= date('now', '-24 months')", ()),
         # Simulados gerados e nunca respondidos
         ("simulados_abandonados", "DELETE FROM simulados WHERE finalizado_em IS NULL "
                                   "AND criado_em <= datetime('now', '-7 days')", ()),

@@ -79,6 +79,7 @@
           <button type="button" data-tela="calendario"><svg><use href="#i-calendario"/></svg><span>Calendário</span></button>
           <button type="button" data-tela="turma"><svg><use href="#i-conversa"/></svg><span>Chat da turma</span></button>
           <button type="button" data-tela="painel" data-so-professor hidden><svg><use href="#i-grafico"/></svg><span>Painel da turma</span></button>
+          <button type="button" data-tela="metricas" data-so-admin hidden><svg><use href="#i-grafico"/></svg><span>Métricas de uso</span></button>
           <h2>Ajuda</h2>
           <button type="button" data-tela="sobre-ia"><svg><use href="#i-brilho"/></svg><span>Sobre o assistente IA</span></button>
           <button type="button" data-tela="parcerias"><svg><use href="#i-formatura"/></svg><span>Universidades e vestibulares</span></button>
@@ -380,6 +381,25 @@
         Confira sempre o <strong>edital oficial</strong> antes de se inscrever.</p>
     </main>
 
+    <main class="tela pagina" id="tela-metricas" hidden>
+      <header class="cabecalho-pagina">
+        <span class="icone-pagina"><svg><use href="#i-grafico"/></svg></span>
+        <div>
+          <h2>Métricas de uso</h2>
+          <p>Só contagens por dia, sem identificar ninguém. Chamadas e tokens mostram o custo da API do Gemini.</p>
+        </div>
+      </header>
+      <label class="periodo-metricas">Período
+        <select id="periodo-metricas">
+          <option value="7">7 dias</option>
+          <option value="30" selected>30 dias</option>
+          <option value="90">90 dias</option>
+        </select>
+      </label>
+      <div id="resumo-metricas" class="resumo-metricas"></div>
+      <div class="tabela-rolavel"><table id="tabela-metricas"></table></div>
+    </main>
+
     <main class="tela pagina" id="tela-sobre-ia" hidden>
       <header class="cabecalho-pagina">
         <span class="icone-pagina"><svg><use href="#i-brilho"/></svg></span>
@@ -642,6 +662,7 @@
   <script src="sobre-ia.js"></script>
   <script src="parcerias.js"></script>
   <script src="suporte.js"></script>
+  <script src="metricas.js"></script>
   <script src="lista-animada.js"></script>
   <script src="brilho-especular.js"></script>
   <script src="botoes.js"></script>

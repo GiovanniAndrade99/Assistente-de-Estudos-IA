@@ -1273,3 +1273,12 @@ button.comando-opcao.botao-origem .conteudo-botao-origem { display: flex; flex-d
 .msg-turma .apagar-msg:hover { color: var(--danger); }
 
 .form-excluir-conta h4.titulo-neutro { color: var(--ink); }
+
+/* Métricas de uso (admin) */
+.periodo-metricas { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.resumo-metricas { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.bloco-metrica { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--radius-md);
+  background: var(--surface); border: 1px solid var(--border); }
+.bloco-metrica strong { font: 600 1.5rem var(--font-display); font-variant-numeric: tabular-nums; }
+.bloco-metrica span { font-size: .82rem; color: var(--ink-3); }
+#tabela-metricas td.numero { text-align: right; font-variant-numeric: tabular-nums; }

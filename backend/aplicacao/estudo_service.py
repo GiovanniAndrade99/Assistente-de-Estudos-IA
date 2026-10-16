@@ -19,7 +19,7 @@ from google.genai import types
 
 from .. import prompts
 from ..erros import ErroDeUso
-from ..infraestrutura import db, rag
+from ..infraestrutura import db, metricas, rag
 from . import limite_service
 
 # Limite de caracteres enviados ao modelo (~50 mil tokens), para não estourar a
@@ -80,6 +80,7 @@ def resumir(disciplina_id: int, arquivo: str, usuario_id: int) -> dict:
     _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
     resposta, modelo = _gerar(prompts.PROMPT_RESUMO.format(documento=documento), temperatura=0.3)
+    metricas.registrar("resumo")
     return {"arquivo": arquivo, "resumo": resposta.text, "aviso": _aviso(cortado), "modelo": modelo}
 
 
@@ -89,6 +90,7 @@ def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantida
     prompt = prompts.PROMPT_FLASHCARDS.format(documento=documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Flashcard])
     cartoes = [c.model_dump() for c in resposta.parsed]
+    metricas.registrar("flashcards")
     return {"arquivo": arquivo, "flashcards": cartoes, "aviso": _aviso(cortado), "modelo": modelo}
 
 
@@ -104,6 +106,7 @@ def gerar_simulado(disciplina_id: int, arquivo: str, usuario_id: int, quantidade
     ]
     if not questoes:
         raise ErroDeUso("Não foi possível montar o simulado. Tente de novo.", 502)
+    metricas.registrar("simulado_gerado")
     simulado_id = db.executar(
         "INSERT INTO simulados (usuario_id, disciplina_id, arquivo, questoes_json, total) VALUES (?, ?, ?, ?, ?)",
         (usuario_id, disciplina_id, arquivo, json.dumps(questoes, ensure_ascii=False), len(questoes)),
@@ -151,6 +154,7 @@ def corrigir_simulado(disciplina_id: int, simulado_id: int, usuario_id: int, res
             "INSERT INTO resultados_simulado (usuario_id, disciplina_id, arquivo, acertos, total) VALUES (?, ?, ?, ?, ?)",
             (usuario_id, disciplina_id, simulado["arquivo"], acertos, len(questoes)),
         )
+    metricas.registrar("simulado_corrigido")
     return {"simulado_id": simulado_id, "acertos": acertos, "total": len(questoes), "correcao": correcao}
 
 
