@@ -15,11 +15,46 @@ def disciplina_ou_404(disciplina_id: int) -> dict:
     return disciplina
 
 
+def professor_administra(usuario: dict, disciplina_id: int) -> bool:
+    """Administrador vê tudo; professor comum só as disciplinas que escolheu no cadastro."""
+    if usuario.get("administrador"):
+        return True
+    return db.consultar_um(
+        "SELECT 1 AS x FROM professor_disciplinas WHERE professor_id = ? AND disciplina_id = ?",
+        (usuario["id"], disciplina_id),
+    ) is not None
+
+
+def conferir_acesso(usuario: dict, disciplina_id: int) -> None:
+    """404 se a disciplina não existe; 403 se for professor de outra matéria."""
+    disciplina_ou_404(disciplina_id)
+    if usuario["tipo"] == "professor" and not professor_administra(usuario, disciplina_id):
+        raise HTTPException(403, "Você não administra esta disciplina.")
+
+
+def vincular_professor(professor_id: int, disciplina_ids: list[int]) -> bool:
+    """Registra as matérias que o professor administra. False se algum id não existir."""
+    ids = set(disciplina_ids)
+    marcadores = ",".join("?" * len(ids))
+    if len(db.consultar(f"SELECT id FROM disciplinas WHERE id IN ({marcadores})", tuple(ids))) != len(ids):
+        return False
+    for disciplina_id in ids:
+        db.executar("INSERT OR IGNORE INTO professor_disciplinas (professor_id, disciplina_id) VALUES (?, ?)",
+                    (professor_id, disciplina_id))
+    return True
+
+
 def listar_disciplinas(usuario: dict) -> list[dict]:
-    # Aluno só vê as disciplinas em que está matriculado; professor vê todas.
-    filtro_matricula = "JOIN matriculas m ON m.disciplina_id = d.id AND m.aluno_id = ?" \
-        if usuario["tipo"] == "aluno" else ""
-    parametros = (usuario["id"],) if usuario["tipo"] == "aluno" else ()
+    # Aluno só vê as disciplinas em que está matriculado; professor só as que administra
+    # (o administrador vê todas).
+    if usuario["tipo"] == "aluno":
+        filtro_matricula = "JOIN matriculas m ON m.disciplina_id = d.id AND m.aluno_id = ?"
+        parametros = (usuario["id"],)
+    elif not usuario.get("administrador"):
+        filtro_matricula = "JOIN professor_disciplinas pd ON pd.disciplina_id = d.id AND pd.professor_id = ?"
+        parametros = (usuario["id"],)
+    else:
+        filtro_matricula, parametros = "", ()
     return db.consultar(
         f"""SELECT d.id, d.nome, d.criado_por, u.nome AS criador,
                    (SELECT COUNT(*) FROM documentos WHERE disciplina_id = d.id) AS documentos
@@ -45,6 +80,8 @@ def criar_disciplina(nome: str, usuario: dict) -> dict:
     if usuario["tipo"] == "aluno":
         db.executar("INSERT OR IGNORE INTO matriculas (aluno_id, disciplina_id) VALUES (?, ?)",
                      (usuario["id"], novo_id))
+    else:
+        vincular_professor(usuario["id"], [novo_id])
     demo_service.popular_dados_demo(novo_id)
     return {"id": novo_id, "nome": nome}
 

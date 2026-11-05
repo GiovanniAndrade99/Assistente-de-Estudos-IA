@@ -37,15 +37,39 @@ class Login(BaseModel):
 @router.post("/cadastro")
 def cadastrar(dados: Cadastro, resposta: Response):
     usuario, token, duracao = auth_service.cadastrar(dados.nome, dados.email, dados.senha, dados.tipo, dados.disciplinas)
-    _definir_cookie(resposta, token, duracao)
+    if token:
+        _definir_cookie(resposta, token, duracao)
     return usuario
 
 
 @router.post("/login")
 def entrar(dados: Login, resposta: Response):
     usuario, token, duracao = auth_service.entrar(dados.email, dados.senha)
+    if token:
+        _definir_cookie(resposta, token, duracao)
+    return usuario
+
+
+class Verificacao(BaseModel):
+    email: str
+    codigo: str
+
+
+class PedidoCodigo(BaseModel):
+    email: str
+
+
+@router.post("/verificar-email")
+def verificar_email(dados: Verificacao, resposta: Response):
+    usuario, token, duracao = auth_service.verificar_email(dados.email, dados.codigo)
     _definir_cookie(resposta, token, duracao)
     return usuario
+
+
+@router.post("/reenviar-codigo")
+def reenviar_codigo(dados: PedidoCodigo):
+    auth_service.reenviar_codigo(dados.email)
+    return {"ok": True}
 
 
 @router.post("/logout")

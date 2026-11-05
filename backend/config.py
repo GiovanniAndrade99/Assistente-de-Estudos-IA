@@ -19,6 +19,18 @@ DURACAO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 LIMITE_TENTATIVAS_LOGIN = 5
 JANELA_TENTATIVAS_LOGIN_MINUTOS = 15
 
+# Confirmação de e-mail (cadastro de professor): código numérico enviado por e-mail
+CODIGO_VALIDADE_MINUTOS = 10
+CODIGO_MAX_TENTATIVAS = 5
+CODIGO_REENVIO_SEGUNDOS = 30
+
+# Envio de e-mail (SMTP). Sem SMTP_HOST, em desenvolvimento o código é escrito no log do servidor.
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "") or SMTP_USER
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")

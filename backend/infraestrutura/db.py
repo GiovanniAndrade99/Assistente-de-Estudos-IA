@@ -154,6 +154,25 @@ CREATE TABLE IF NOT EXISTS matriculas (
     criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (aluno_id, disciplina_id)
 );
+
+-- Disciplinas que cada professor administra (escolhidas no cadastro). O professor só vê
+-- notas, alunos, perguntas, atividades e chat das disciplinas listadas aqui.
+CREATE TABLE IF NOT EXISTS professor_disciplinas (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    professor_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    disciplina_id INTEGER NOT NULL REFERENCES disciplinas(id) ON DELETE CASCADE,
+    criado_em     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (professor_id, disciplina_id)
+);
+
+-- Código de confirmação de e-mail: guardamos só o hash, com validade e limite de tentativas.
+CREATE TABLE IF NOT EXISTS codigos_verificacao (
+    usuario_id  INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+    codigo_hash TEXT NOT NULL,
+    expira_em   TEXT NOT NULL,
+    tentativas  INTEGER NOT NULL DEFAULT 0,
+    criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 # Colunas criadas depois que o banco já existia: CREATE TABLE IF NOT EXISTS não as
@@ -162,6 +181,8 @@ MIGRACOES = [
     ("eventos", "hora", "TEXT"),
     ("sessoes", "expires_at", "TEXT"),
     ("usuarios", "administrador", "INTEGER NOT NULL DEFAULT 0"),
+    # contas já existentes contam como confirmadas; só cadastros novos de professor precisam do código
+    ("usuarios", "email_verificado", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 
@@ -186,11 +207,21 @@ def criar_tabelas() -> None:
         matriculas_e_nova = not c.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'matriculas'"
         ).fetchone()
+        vinculo_e_novo = not c.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'professor_disciplinas'"
+        ).fetchone()
         c.executescript(ESQUEMA)
         for tabela, coluna, tipo in MIGRACOES:
             colunas = {linha["name"] for linha in c.execute(f"PRAGMA table_info({tabela})")}
             if coluna not in colunas:
                 c.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+        if vinculo_e_novo:
+            # Professores que já criaram disciplinas continuam administrando-as.
+            c.execute(
+                """INSERT OR IGNORE INTO professor_disciplinas (professor_id, disciplina_id)
+                   SELECT d.criado_por, d.id FROM disciplinas d
+                   JOIN usuarios u ON u.id = d.criado_por WHERE u.tipo = 'professor'"""
+            )
         if matriculas_e_nova:
             # Quem já tinha conta antes da matrícula por disciplina existir via todas as
             # disciplinas; sem isso perderia acesso ao que já estudava.
