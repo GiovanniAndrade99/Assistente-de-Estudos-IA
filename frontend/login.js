@@ -3,6 +3,8 @@
 
 const formEntrar = document.getElementById("form-entrar");
 const formCadastrar = document.getElementById("form-cadastrar");
+const formVerificar = document.getElementById("form-verificar");
+let emailPendente = "";
 const abas = document.querySelectorAll(".aba-login");
 
 // Já está logado? Vai direto para o app.
@@ -72,12 +74,14 @@ function limparErros(form) {
 function mostrarForm(nome) {
   formEntrar.hidden = nome !== "entrar";
   formCadastrar.hidden = nome !== "criar";
+  formVerificar.hidden = nome !== "verificar";
+  document.querySelector(".abas-login").hidden = nome === "verificar";
   for (const aba of abas) {
     const ativa = aba.dataset.aba === nome;
     aba.classList.toggle("ativa", ativa);
     aba.setAttribute("aria-selected", String(ativa));
   }
-  const form = nome === "entrar" ? formEntrar : formCadastrar;
+  const form = nome === "entrar" ? formEntrar : nome === "criar" ? formCadastrar : formVerificar;
   limparErros(form);
   form.querySelector("input").focus({ preventScroll: true });
 }
@@ -153,10 +157,16 @@ botaoAddMateria.onclick = () => {
   atualizarOpcoes();
 };
 
+// Aluno: matérias que quer estudar (opcional). Professor: matéria que administra (obrigatória).
+function ajustarCampoMaterias() {
+  const professor = document.querySelector('input[name="tipo"]:checked').value === "professor";
+  document.getElementById("rotulo-materias").innerHTML = professor
+    ? "Matéria que você administra"
+    : 'Matérias que você quer estudar <span class="opcional">(opcional)</span>';
+  if (professor && !listaMaterias.children.length && materiasCatalogo.length) botaoAddMateria.click();
+}
 for (const radio of document.querySelectorAll('input[name="tipo"]')) {
-  radio.addEventListener("change", () => {
-    campoMaterias.hidden = document.querySelector('input[name="tipo"]:checked').value !== "aluno";
-  });
+  radio.addEventListener("change", ajustarCampoMaterias);
 }
 
 function materiasEscolhidas() {
@@ -208,6 +218,12 @@ async function enviar(form, url, extra = {}) {
         : dados.detail || dados.message || dados.error;
       throw new Error(detalhe || `Falha no servidor (HTTP ${resposta.status} em ${resposta.url}): ${JSON.stringify(dados)}`);
     }
+    if (dados.verificacao_pendente) {  // professor: falta confirmar o e-mail com o código
+      emailPendente = dados.email;
+      document.getElementById("verificar-email").textContent = dados.email;
+      mostrarForm("verificar");
+      return;
+    }
     location.href = "/";
   } catch (e) {
     form.querySelector(".erro-geral").textContent = e.message;
@@ -219,8 +235,24 @@ async function enviar(form, url, extra = {}) {
 formEntrar.addEventListener("submit", (e) => { e.preventDefault(); enviar(formEntrar, "/api/auth/login"); });
 formCadastrar.addEventListener("submit", (e) => {
   e.preventDefault();
+  if (document.querySelector('input[name="tipo"]:checked').value === "professor" && !materiasEscolhidas().length) {
+    formCadastrar.querySelector(".erro-geral").textContent = "Escolha a matéria que você administra.";
+    return;
+  }
   enviar(formCadastrar, "/api/auth/cadastro", { disciplinas: materiasEscolhidas() });
 });
+formVerificar.addEventListener("submit", (e) => {
+  e.preventDefault();
+  enviar(formVerificar, "/api/auth/verificar-email", { email: emailPendente });
+});
+document.getElementById("botao-reenviar").onclick = async () => {
+  const erro = formVerificar.querySelector(".erro-geral");
+  erro.textContent = "";
+  const r = await fetch("/api/auth/reenviar-codigo", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: emailPendente }),
+  });
+  erro.textContent = r.ok ? "Novo código enviado." : ((await r.json().catch(() => ({}))).detail || "Não foi possível reenviar.");
+};
 
 // login.html#cadastrar abre direto no cadastro
 mostrarForm(location.hash === "#cadastrar" ? "criar" : "entrar");

@@ -96,7 +96,7 @@
           </div>
 
           <div class="campo campo-materias" id="campo-materias">
-            <span class="rotulo-campo">Matérias que você quer estudar <span class="opcional">(opcional)</span></span>
+            <span class="rotulo-campo" id="rotulo-materias">Matérias que você quer estudar <span class="opcional">(opcional)</span></span>
             <div class="lista-materias" id="lista-materias"></div>
             <button type="button" id="botao-add-materia" class="botao-add-materia">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -106,6 +106,22 @@
 
           <p class="erro-geral" role="alert"></p>
           <button type="submit" class="botao-entrar">Criar conta</button>
+        </form>
+
+        <form id="form-verificar" novalidate hidden>
+          <h2>Confirme seu e-mail</h2>
+          <p class="subtitulo">Enviamos um código de 6 dígitos para <strong id="verificar-email"></strong>. Digite-o abaixo.</p>
+
+          <div class="campo">
+            <label for="verificar-codigo">Código</label>
+            <input type="text" id="verificar-codigo" name="codigo" inputmode="numeric" maxlength="6"
+              autocomplete="one-time-code" placeholder="000000" data-rotulo="Código" required>
+            <p class="erro-campo"></p>
+          </div>
+
+          <p class="erro-geral" role="alert"></p>
+          <button type="submit" class="botao-entrar">Confirmar</button>
+          <button type="button" id="botao-reenviar" class="botao-add-materia">Reenviar código</button>
         </form>
       </section>
     </main>

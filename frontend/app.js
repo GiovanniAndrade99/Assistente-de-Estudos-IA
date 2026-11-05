@@ -674,7 +674,8 @@ async function carregarPainel() {
   try {
     const url = `/api/professor/${abaPainel}?disciplina_id=${disciplinaAtual.id}`;
     const linhas = await chamarApi(url);
-    conteudo.innerHTML = abaPainel === "notas" ? htmlNotas(linhas) : htmlPerguntas(linhas);
+    conteudo.innerHTML = abaPainel === "notas" ? htmlNotas(linhas)
+      : abaPainel === "alunos" ? htmlAlunos(linhas) : htmlPerguntas(linhas);
   } catch (erro) {
     conteudo.innerHTML = `<p class="erro">${escaparHtml(erro.message)}</p>`;
   }
@@ -708,6 +709,16 @@ function htmlNotas(linhas) {
     <table><thead><tr><th>Aluno</th><th>Simulados</th><th>Acerto médio</th></tr></thead><tbody>${resumo}</tbody></table>
     <h3>Histórico</h3>
     <table><thead><tr><th>Aluno</th><th>Material</th><th>Nota</th><th>Data</th></tr></thead><tbody>${historico}</tbody></table>`;
+}
+
+function htmlAlunos(linhas) {
+  if (!linhas.length) return "<p class='dica'>Nenhum aluno matriculado nesta disciplina ainda.</p>";
+  const corpo = linhas.map((l) => `
+    <tr><td>${escaparHtml(l.nome)}${l.demonstracao ? " <small>(exemplo)</small>" : ""}</td>
+    <td>${escaparHtml(l.email)}</td><td>${l.entregas}</td>
+    <td>${l.a_corrigir ? `<strong>${l.a_corrigir} a corrigir</strong>` : "—"}</td><td>${l.simulados}</td></tr>`).join("");
+  return `<table><thead><tr><th>Aluno</th><th>E-mail</th><th>Entregas</th><th>Correção</th><th>Simulados</th></tr></thead>
+    <tbody>${corpo}</tbody></table>`;
 }
 
 function htmlPerguntas(linhas) {
