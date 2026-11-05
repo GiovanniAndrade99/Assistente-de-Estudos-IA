@@ -1,16 +1,25 @@
 from fastapi import APIRouter, Depends
 
 from ..aplicacao import professor_service
-from .dependencias import somente_professor
+from .dependencias import acesso_disciplina, somente_professor
 
-router = APIRouter()
+# somente_professor barra alunos; acesso_disciplina barra professor de outra matéria
+router = APIRouter(
+    prefix="/api/professor",
+    dependencies=[Depends(somente_professor), Depends(acesso_disciplina)],
+)
 
 
-@router.get("/api/professor/perguntas")
-def perguntas_dos_alunos(disciplina_id: int, professor: dict = Depends(somente_professor)):
+@router.get("/perguntas")
+def perguntas_dos_alunos(disciplina_id: int):
     return professor_service.perguntas_dos_alunos(disciplina_id)
 
 
-@router.get("/api/professor/notas")
-def notas_dos_alunos(disciplina_id: int, professor: dict = Depends(somente_professor)):
+@router.get("/notas")
+def notas_dos_alunos(disciplina_id: int):
     return professor_service.notas_dos_alunos(disciplina_id)
+
+
+@router.get("/alunos")
+def alunos_da_disciplina(disciplina_id: int):
+    return professor_service.alunos_da_disciplina(disciplina_id)

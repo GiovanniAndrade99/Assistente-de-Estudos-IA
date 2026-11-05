@@ -1,6 +1,7 @@
 """Dependências do FastAPI usadas por praticamente toda rota autenticada."""
 from fastapi import Depends, HTTPException, Request
 
+from ..aplicacao import disciplinas_service
 from ..aplicacao.auth_service import NOME_COOKIE, usuario_da_sessao
 
 
@@ -16,4 +17,10 @@ def usuario_atual(request: Request) -> dict:
 def somente_professor(usuario: dict = Depends(usuario_atual)) -> dict:
     if usuario["tipo"] != "professor" and not usuario.get("administrador"):
         raise HTTPException(403, "Área restrita a professores.")
+    return usuario
+
+
+def acesso_disciplina(disciplina_id: int, usuario: dict = Depends(usuario_atual)) -> dict:
+    """Rotas de uma disciplina: ela precisa existir e, para professor, ser uma das que ele administra."""
+    disciplinas_service.conferir_acesso(usuario, disciplina_id)
     return usuario
