@@ -145,6 +145,16 @@ CREATE TABLE IF NOT EXISTS tentativas_login (
     criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Rate limit genérico (aplicacao/limite_service.py): quantas requisições uma
+-- chave (usuário ou IP) fez a uma rota, para bloquear automação/abuso de custo.
+CREATE TABLE IF NOT EXISTS limite_uso (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    chave       TEXT NOT NULL,
+    rota        TEXT NOT NULL,
+    criado_em   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_limite_uso_chave_rota ON limite_uso (chave, rota, criado_em);
+
 -- Matrícula do aluno nas disciplinas que escolheu (no cadastro ou depois).
 -- Tabela nova: o backfill de quem já tinha conta fica em criar_tabelas().
 CREATE TABLE IF NOT EXISTS matriculas (

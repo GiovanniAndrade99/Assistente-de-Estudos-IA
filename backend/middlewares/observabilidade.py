@@ -68,6 +68,8 @@ class ObservabilidadeMiddleware(BaseHTTPMiddleware):
         resposta.headers["X-Content-Type-Options"] = "nosniff"
         resposta.headers["X-Frame-Options"] = "DENY"
         resposta.headers["Referrer-Policy"] = "same-origin"
+        if request.url.path.startswith("/api/"):
+            resposta.headers["Cache-Control"] = "no-store"
         if config.APP_ENV == "production":
             resposta.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
 

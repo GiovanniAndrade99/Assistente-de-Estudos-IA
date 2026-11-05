@@ -1,13 +1,10 @@
 from fastapi import APIRouter, Depends
 
 from ..aplicacao import professor_service
-from .dependencias import acesso_disciplina, somente_professor
+from .dependencias import professor_da_disciplina
 
-# somente_professor barra alunos; acesso_disciplina barra professor de outra matéria
-router = APIRouter(
-    prefix="/api/professor",
-    dependencies=[Depends(somente_professor), Depends(acesso_disciplina)],
-)
+# professor_da_disciplina barra alunos e professor de outra matéria
+router = APIRouter(prefix="/api/professor", dependencies=[Depends(professor_da_disciplina)])
 
 
 @router.get("/perguntas")

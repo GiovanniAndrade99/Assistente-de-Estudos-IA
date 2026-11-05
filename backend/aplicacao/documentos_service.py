@@ -5,6 +5,7 @@ from fastapi import HTTPException, UploadFile
 
 from .. import config
 from ..infraestrutura import db, rag
+from . import limite_service
 from .disciplinas_service import disciplina_ou_404
 
 _TAMANHO_CHUNK = 1024 * 1024  # 1 MiB por leitura
@@ -42,6 +43,7 @@ def _ler_com_limite(arquivo: UploadFile, limite_mb: int) -> bytes:
 
 def enviar_documento(disciplina_id: int, arquivo: UploadFile, usuario_id: int) -> dict:
     disciplina_ou_404(disciplina_id)
+    limite_service.limitar(f"usuario:{usuario_id}", "upload_documento", limite=10, janela_minutos=5)
     nome = nome_seguro(arquivo.filename or "")
     if not nome.lower().endswith(".pdf"):
         raise HTTPException(400, "Envie um arquivo .pdf")
@@ -66,6 +68,8 @@ def enviar_documento(disciplina_id: int, arquivo: UploadFile, usuario_id: int) -
 
 
 def remover_documento(disciplina_id: int, arquivo: str) -> None:
+    # Quem pode chamar esta função já foi conferido na rota (dependencias.
+    # professor_da_disciplina): só o professor dono da disciplina, ou admin.
     nome = nome_seguro(arquivo)
     rag.remover_documento(disciplina_id, nome)
     rag.caminho_do_pdf(disciplina_id, nome).unlink(missing_ok=True)

@@ -17,7 +17,10 @@ import hashlib
 import hmac
 import secrets
 
-ITERACOES_SENHA = 200_000
+# OWASP recomenda 600 mil para PBKDF2-HMAC-SHA256. O contador faz parte do
+# formato salvo, então hashes antigos continuam verificáveis e são atualizados
+# no próximo login bem-sucedido.
+ITERACOES_SENHA = 600_000
 
 
 def gerar_hash_senha(senha: str) -> str:
@@ -27,9 +30,20 @@ def gerar_hash_senha(senha: str) -> str:
 
 
 def conferir_senha(senha: str, salvo: str) -> bool:
-    iteracoes, sal_hex, hash_hex = salvo.split("$")
-    h = hashlib.pbkdf2_hmac("sha256", senha.encode(), bytes.fromhex(sal_hex), int(iteracoes))
-    return hmac.compare_digest(h.hex(), hash_hex)  # comparação em tempo constante
+    try:
+        iteracoes, sal_hex, hash_hex = salvo.split("$")
+        iteracoes = int(iteracoes)
+        # Recusa parâmetros corrompidos ou adulterados que poderiam causar
+        # consumo excessivo de CPU ou aceitar um hash fraco.
+        if not 1 <= iteracoes <= ITERACOES_SENHA or len(bytes.fromhex(sal_hex)) != 16:
+            return False
+        hash_salvo = bytes.fromhex(hash_hex)
+        if len(hash_salvo) != hashlib.sha256().digest_size:
+            return False
+        hash_calculado = hashlib.pbkdf2_hmac("sha256", senha.encode(), bytes.fromhex(sal_hex), iteracoes)
+        return hmac.compare_digest(hash_calculado, hash_salvo)
+    except (ValueError, TypeError):
+        return False
 
 
 def gerar_token_sessao() -> str:

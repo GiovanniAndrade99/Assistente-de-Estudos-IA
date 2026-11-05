@@ -15,6 +15,7 @@ from google.genai import types
 from .. import prompts
 from ..infraestrutura import db
 from ..infraestrutura.rag import caminho_do_pdf, extrair_paginas, gerar_conteudo
+from . import limite_service
 from .disciplinas_service import disciplina_ou_404
 from .documentos_service import nome_seguro
 
@@ -65,13 +66,19 @@ def _aviso(cortado: bool) -> str | None:
     return None
 
 
-def resumir(disciplina_id: int, arquivo: str) -> dict:
+def _limitar_estudo(usuario_id: int) -> None:
+    limite_service.limitar(f"usuario:{usuario_id}", "estudo", limite=15, janela_minutos=5)
+
+
+def resumir(disciplina_id: int, arquivo: str, usuario_id: int) -> dict:
+    _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
     resposta, modelo = _gerar(prompts.PROMPT_RESUMO.format(documento=documento), temperatura=0.3)
     return {"arquivo": arquivo, "resumo": resposta.text, "aviso": _aviso(cortado), "modelo": modelo}
 
 
-def gerar_flashcards(disciplina_id: int, arquivo: str, quantidade: int = 10) -> dict:
+def gerar_flashcards(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 10) -> dict:
+    _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
     prompt = prompts.PROMPT_FLASHCARDS.format(documento=documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Flashcard])
@@ -79,7 +86,8 @@ def gerar_flashcards(disciplina_id: int, arquivo: str, quantidade: int = 10) -> 
     return {"arquivo": arquivo, "flashcards": cartoes, "aviso": _aviso(cortado), "modelo": modelo}
 
 
-def gerar_simulado(disciplina_id: int, arquivo: str, quantidade: int = 5) -> dict:
+def gerar_simulado(disciplina_id: int, arquivo: str, usuario_id: int, quantidade: int = 5) -> dict:
+    _limitar_estudo(usuario_id)
     documento, cortado = texto_do_documento(disciplina_id, arquivo)
     prompt = prompts.PROMPT_SIMULADO.format(documento=documento, quantidade=quantidade)
     resposta, modelo = _gerar(prompt, temperatura=0.5, schema=list[Questao])
